@@ -15,7 +15,7 @@ namespace ew {
 	Model::Model(const std::string& filePath)
 	{
 		Assimp::Importer importer;
-		const aiScene* aiScene = importer.ReadFile(filePath, aiProcess_Triangulate);
+		const aiScene* aiScene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_CalcTangentSpace);
 		for (size_t i = 0; i < aiScene->mNumMeshes; i++)
 		{
 			aiMesh* aiMesh = aiScene->mMeshes[i];
