@@ -19,6 +19,7 @@
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
 void drawUI();
+void drawTransformUI(ew::Transform &transform);
 void resetCamera(ew::Camera* camera, ew::CameraController* controller);
 
 //Global state
@@ -37,6 +38,9 @@ struct Material {
 	float shininess = 128;
 }material;
 
+ew::Transform planeTransform;
+glm::vec3 lightDir;
+
 int main() {
 	GLFWwindow* window = initWindow("Assignment 0", screenWidth, screenHeight);
 
@@ -44,11 +48,10 @@ int main() {
 
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Transform monkeyTransform;
-	GLuint brickTexture = ew::loadTexture("assets/Bricks_Texture/Bricks092_1K-PNG_Color.png");
-	GLuint brickTextureNM = ew::loadTexture("assets/Bricks_Texture/Bricks092_1K-PNG_NormalGL.png");
+	GLuint brickTexture = ew::loadTexture("assets/Sand_Texture/Ground080_1K-PNG_Color.png");
+	GLuint brickTextureNM = ew::loadTexture("assets/Bricks_Texture/Ground080_1K-PNG_NormalGL.png");
 
 	ew::Mesh planeMesh(ew::createPlane(10, 10, 2));
-	ew::Transform planeTransform;
 	planeTransform.position = glm::vec3(0, -1.0, 0);
 
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
@@ -78,7 +81,7 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 // Uniforms & Draw ------------------------------------------------------*/
-		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));		
+		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));	
 
 		shader.use();
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
@@ -93,6 +96,7 @@ int main() {
 		shader.setFloat("_Material.dK", material.dK);
 		shader.setFloat("_Material.sK", material.sK);
 		shader.setFloat("_Material.shininess", material.shininess);
+		shader.setVec3("_LightDirection", lightDir);
 		monkeyModel.draw();
 
 		shader.setMat4("_Model", planeTransform.modelMatrix());
@@ -117,17 +121,29 @@ void drawUI() {
 	if (ImGui::Button("Reset Camera"))
 		resetCamera(&camera, &cameraController);
 
+	ImGui::DragFloat3("Light Dir", &lightDir.x, 0.05f, -1.0f, 1.0f);
+
 	if (ImGui::CollapsingHeader("Material")) {
 		ImGui::SliderFloat("AmbientK", &material.aK, 0.0f, 1.0f);
 		ImGui::SliderFloat("DiffuseK", &material.dK, 0.0f, 1.0f);
 		ImGui::SliderFloat("SpecularK", &material.sK, 0.0f, 1.0f);
 		ImGui::SliderFloat("Shininess", &material.shininess, 2.0f, 1024.0f);
 	}
+	
+	if (ImGui::CollapsingHeader("Plane Transform")) {
+		drawTransformUI(planeTransform);
+	}
 
 	ImGui::End();
 
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void drawTransformUI(ew::Transform &transform) {
+	ImGui::DragFloat3("Position", &transform.position.x, .05f,  0.0f, 10.0f);
+	ImGui::DragFloat4("Rotation", &transform.rotation.x, .05f, 0.0f, 10.0f);
+	ImGui::DragFloat3("Scale", &transform.scale.x, .05f, 0.0f, 10.0f);
 }
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
