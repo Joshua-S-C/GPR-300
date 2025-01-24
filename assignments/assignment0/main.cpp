@@ -14,6 +14,7 @@
 #include <ew/transform.h>
 #include <ew/cameraController.h>
 #include <ew/texture.h>
+#include <ew/procGen.h>
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
@@ -40,9 +41,15 @@ int main() {
 	GLFWwindow* window = initWindow("Assignment 0", screenWidth, screenHeight);
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
+
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Transform monkeyTransform;
 	GLuint brickTexture = ew::loadTexture("assets/Bricks_Texture/Bricks092_1K-PNG_Color.png");
+	GLuint brickTextureNM = ew::loadTexture("assets/Bricks_Texture/Bricks092_1K-PNG_NormalGL.png");
+
+	ew::Mesh planeMesh(ew::createPlane(10, 10, 2));
+	ew::Transform planeTransform;
+	planeTransform.position = glm::vec3(0, -1.0, 0);
 
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
@@ -71,20 +78,25 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 // Uniforms & Draw ------------------------------------------------------*/
-		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
-		
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, brickTexture);
+		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));		
 
 		shader.use();
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, brickTexture);
 		shader.setInt("_MainTex", 0);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, brickTextureNM);
+		shader.setInt("_NormalMap", 0);
 		shader.setFloat("_Material.aK", material.aK);
 		shader.setFloat("_Material.dK", material.dK);
 		shader.setFloat("_Material.sK", material.sK);
 		shader.setFloat("_Material.shininess", material.shininess);
 		monkeyModel.draw();
+
+		shader.setMat4("_Model", planeTransform.modelMatrix());
+		planeMesh.draw();
 
 		drawUI();
 

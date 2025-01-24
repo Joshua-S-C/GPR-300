@@ -6,6 +6,7 @@ in Surface{
 	vec3 WorldPos;
 	vec3 WorldNormal;
 	vec2 TexCoord;
+	vec3 Tangent;
 }fs_in;
 
 struct Material{
@@ -19,14 +20,18 @@ struct Material{
 uniform Material _Material;
 
 uniform sampler2D _MainTex;
+uniform sampler2D _NormalMap;
+
 uniform vec3 _EyePos;
 uniform vec3 _LightDirection = vec3(0.0,-1.0,0.0);
 uniform vec3 _LightColor = vec3(1.0);
 uniform vec3 _AmbientColor = vec3(0.3,0.4,0.46);
 
 void main(){
-	vec3 normal = normalize(fs_in.WorldNormal);
-
+	//vec3 normal = normalize(fs_in.WorldNormal);
+	vec3 normal = texture(_NormalMap, fs_in.TexCoord).rgb;
+	normal = normalize(normal * 2.0 - 1.0);
+	
 	vec3 toLight = -_LightDirection;
 	vec3 toEye = normalize(_EyePos - fs_in.WorldPos);
 	vec3 h = normalize(toLight + toEye);
