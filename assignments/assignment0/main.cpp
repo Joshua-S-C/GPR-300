@@ -13,11 +13,12 @@
 #include <ew/camera.h>
 #include <ew/transform.h>
 #include <ew/cameraController.h>
-
+#include <ew/texture.h>
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
 void drawUI();
+void resetCamera(ew::Camera* camera, ew::CameraController* controller);
 
 //Global state
 int screenWidth = 1080;
@@ -25,15 +26,24 @@ int screenHeight = 720;
 float prevFrameTime;
 float deltaTime;
 
+ew::CameraController cameraController;
+ew::Camera camera;
+
+struct Material {
+	float aK = 1.0;
+	float dK = 0.5;
+	float sK = 0.5;
+	float shininess = 128;
+}material;
+
 int main() {
 	GLFWwindow* window = initWindow("Assignment 0", screenWidth, screenHeight);
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj");
 	ew::Transform monkeyTransform;
+	GLuint brickTexture = ew::loadTexture("assets/brick_color.jpg");
 
-	ew::CameraController cameraController;
-	ew::Camera camera;
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
 	camera.aspectRatio = (float)screenWidth / screenHeight;
@@ -54,7 +64,7 @@ int main() {
 		prevFrameTime = time;
 
 		camera.aspectRatio = (float)screenWidth / screenHeight;
-		cameraController.move(window, &camera, deltaTime)
+		cameraController.move(window, &camera, deltaTime);
 
 		//RENDER
 		glClearColor(0.6f,0.8f,0.92f,1.0f);
@@ -62,12 +72,19 @@ int main() {
 
 // Uniforms & Draw ------------------------------------------------------*/
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
+		
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, brickTexture);
 
 		shader.use();
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
-		monkeyModel.draw(); //Draws monkey model using current shader
-
+		shader.setInt("_MainTex", 0);
+		shader.setFloat("_Material.aK", material.aK);
+		shader.setFloat("_Material.dK", material.dK);
+		shader.setFloat("_Material.sK", material.sK);
+		shader.setFloat("_Material.shininess", material.shininess);
+		monkeyModel.draw();
 
 		drawUI();
 
@@ -82,7 +99,19 @@ void drawUI() {
 	ImGui::NewFrame();
 
 	ImGui::Begin("Settings");
-	ImGui::Text("Add Controls Here!");
+
+	ImGui::Text("Hai");
+
+	if (ImGui::Button("Reset Camera"))
+		resetCamera(&camera, &cameraController);
+
+	if (ImGui::CollapsingHeader("Material")) {
+		ImGui::SliderFloat("AmbientK", &material.aK, 0.0f, 1.0f);
+		ImGui::SliderFloat("DiffuseK", &material.dK, 0.0f, 1.0f);
+		ImGui::SliderFloat("SpecularK", &material.sK, 0.0f, 1.0f);
+		ImGui::SliderFloat("Shininess", &material.shininess, 2.0f, 1024.0f);
+	}
+
 	ImGui::End();
 
 	ImGui::Render();
@@ -131,3 +160,9 @@ GLFWwindow* initWindow(const char* title, int width, int height) {
 	return window;
 }
 
+// From Eric
+void resetCamera(ew::Camera* camera, ew::CameraController* controller) {
+	camera->position = glm::vec3(0, 0, 5.0f);
+	camera->target = glm::vec3(0);
+	controller->yaw = controller->pitch = 0;
+}

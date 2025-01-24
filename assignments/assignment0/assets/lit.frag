@@ -1,9 +1,42 @@
 #version 450
 
 out vec4 FragColor;
-in vec3 Normal;
+
+in Surface{
+	vec3 WorldPos;
+	vec3 WorldNormal;
+	vec2 TexCoord;
+}fs_in;
+
+struct Material{
+	// K = coefficient (0-1 range)
+	float aK;
+	float dK;
+	float sK;
+	float shininess;
+};
+
+uniform Material _Material;
+
+uniform sampler2D _MainTex;
+uniform vec3 _EyePos;
+uniform vec3 _LightDirection = vec3(0.0,-1.0,0.0);
+uniform vec3 _LightColor = vec3(1.0);
+uniform vec3 _AmbientColor = vec3(0.3,0.4,0.46);
 
 void main(){
-	//Shade with 0-1 normal
-	FragColor = vec4(Normal * 0.5 + 0.5,1.0);
+	vec3 normal = normalize(fs_in.WorldNormal);
+
+	vec3 toLight = -_LightDirection;
+	vec3 toEye = normalize(_EyePos - fs_in.WorldPos);
+	vec3 h = normalize(toLight + toEye);
+
+	vec3 ambientClr = _AmbientColor * _Material.aK;
+	float diffuse = _Material.dK * max(dot(normal,toLight),0.0);
+	float specular = _Material.sK * pow(max(dot(normal,h),0.0), _Material.shininess);
+
+	vec3 lightColor = (diffuse +  specular) * _LightColor + ambientClr;
+	vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
+
+	FragColor = vec4(objectColor * lightColor,1.0);
 }
