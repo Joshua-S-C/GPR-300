@@ -5,6 +5,7 @@
 #pragma once
 #include <string>
 #include <glm/glm.hpp>
+#include "../jsc/light.h"
 
 namespace ew {
 	std::string loadShaderSourceFromFile(const std::string& filePath);
@@ -22,6 +23,11 @@ namespace ew {
 		void setVec4(const std::string& name, float x, float y, float z, float w) const;
 		void setVec4(const std::string& name, const glm::vec4& v) const;
 		void setMat4(const std::string& name, const glm::mat4& m) const;
+
+		void setBool(const std::string& name, bool v) const;	// Added
+		void setMaterial(const std::string& name, jsc::Material v) const; //Added
+		void setLight(const std::string& name, jsc::Light v) const; //Added
+
 	private:
 		unsigned int m_id; //Shader program handle
 	};

@@ -16,6 +16,8 @@
 #include <ew/texture.h>
 #include <ew/procGen.h>
 
+#include <jsc/light.h>
+
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
 void drawUI();
@@ -31,15 +33,15 @@ float deltaTime;
 ew::CameraController cameraController;
 ew::Camera camera;
 
-struct Material {
-	float aK = 1.0;
-	float dK = 0.5;
-	float sK = 0.5;
-	float shininess = 128;
-}material;
-
 ew::Transform planeTransform;
-glm::vec3 lightDir;
+
+jsc::Material material(1, .5, .5, 128);
+jsc::Light light(glm::vec3(1.0));
+jsc::DirectionalLight dirLight(glm::vec3(0.0, -1.0, 0.0));
+
+bool useNormalMap = true;
+bool useDirectionalLight = true;
+bool useShowNormals = false;
 
 int main() {
 	GLFWwindow* window = initWindow("Assignment 0", screenWidth, screenHeight);
@@ -86,17 +88,23 @@ int main() {
 		shader.use();
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, brickTexture);
 		shader.setInt("_MainTex", 0);
+
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, brickTextureNM);
 		shader.setInt("_NormalMap", 0);
-		shader.setFloat("_Material.aK", material.aK);
-		shader.setFloat("_Material.dK", material.dK);
-		shader.setFloat("_Material.sK", material.sK);
-		shader.setFloat("_Material.shininess", material.shininess);
-		shader.setVec3("_LightDirection", lightDir);
+
+		shader.setMaterial("_Material", material);
+		shader.setLight("_Light", light);
+		shader.setVec3("_DirectionalLight.dir", dirLight.dir);
+
+		shader.setBool("_UseNormalMap", useNormalMap);
+		shader.setBool("_UseDirectionalLight", useDirectionalLight);
+		shader.setBool("_UseShowNormals", useShowNormals);
+
 		monkeyModel.draw();
 
 		shader.setMat4("_Model", planeTransform.modelMatrix());
@@ -121,14 +129,16 @@ void drawUI() {
 	if (ImGui::Button("Reset Camera"))
 		resetCamera(&camera, &cameraController);
 
-	ImGui::DragFloat3("Light Dir", &lightDir.x, 0.05f, -1.0f, 1.0f);
+	ImGui::Checkbox("Use Normal Map", &useNormalMap);
+	ImGui::Checkbox("Use Directional Light", &useDirectionalLight);
+	ImGui::Checkbox("Show Normals", &useShowNormals);
 
-	if (ImGui::CollapsingHeader("Material")) {
-		ImGui::SliderFloat("AmbientK", &material.aK, 0.0f, 1.0f);
-		ImGui::SliderFloat("DiffuseK", &material.dK, 0.0f, 1.0f);
-		ImGui::SliderFloat("SpecularK", &material.sK, 0.0f, 1.0f);
-		ImGui::SliderFloat("Shininess", &material.shininess, 2.0f, 1024.0f);
-	}
+	if (useDirectionalLight)
+		dirLight.drawUI();
+	else
+		light.drawUI();
+	
+	material.drawUI();
 	
 	if (ImGui::CollapsingHeader("Plane Transform")) {
 		drawTransformUI(planeTransform);
@@ -141,9 +151,9 @@ void drawUI() {
 }
 
 void drawTransformUI(ew::Transform &transform) {
-	ImGui::DragFloat3("Position", &transform.position.x, .05f,  0.0f, 10.0f);
-	ImGui::DragFloat4("Rotation", &transform.rotation.x, .05f, 0.0f, 10.0f);
-	ImGui::DragFloat3("Scale", &transform.scale.x, .05f, 0.0f, 10.0f);
+	ImGui::DragFloat3("Position", &transform.position.x, .05f,  -10.0f, 10.0f);
+	ImGui::DragFloat4("Rotation", &transform.rotation.x, .05f, -10.0f, 10.0f);
+	ImGui::DragFloat3("Scale", &transform.scale.x, .05f, -10.0f, 10.0f);
 }
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
