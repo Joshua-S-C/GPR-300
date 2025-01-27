@@ -37,21 +37,38 @@ ew::Transform planeTransform;
 
 jsc::Material material(1, .5, .5, 128);
 jsc::Light light(glm::vec3(1.0));
-jsc::DirectionalLight dirLight(glm::vec3(0.0, -1.0, 0.0));
+jsc::DirectionalLight dirLight(glm::vec3(0.0, 1.0, 0.0));
 
-bool useNormalMap = true;
-bool useDirectionalLight = true;
-bool useShowNormals = false;
+struct AppSettings {
+	bool useNormalMap = true;
+	bool useDirectionalLight = true;
+
+	int renderTypeIndex = 0;
+	enum RenderTypes {
+		Textured = 0,
+		World_Normals = 1,
+		Normal_Map = 2
+	};
+	const char* renderTypeNames[4] = { 
+		"Textured", 
+		"Unlit",
+		"World Normals",
+		"Normal Map"
+	};
+}settings;
 
 int main() {
 	GLFWwindow* window = initWindow("Assignment 0", screenWidth, screenHeight);
 
+// Setup ----------------------------------------------------------------*/
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
+	light.transform.position.y = 2.0;
 
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Transform monkeyTransform;
-	GLuint brickTexture = ew::loadTexture("assets/Sand_Texture/Ground080_1K-PNG_Color.png");
-	GLuint brickTextureNM = ew::loadTexture("assets/Bricks_Texture/Ground080_1K-PNG_NormalGL.png");
+
+	GLuint texture = ew::loadTexture("assets/Sand_Texture/Ground080_1K-PNG_Color.png");
+	GLuint textureNormalMap = ew::loadTexture("assets/Sand_Texture/Ground080_1K-PNG_NormalGL.png");
 
 	ew::Mesh planeMesh(ew::createPlane(10, 10, 2));
 	planeTransform.position = glm::vec3(0, -1.0, 0);
@@ -88,22 +105,22 @@ int main() {
 		shader.use();
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
-		
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, brickTexture);
-		shader.setInt("_MainTex", 0);
 
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		shader.setInt("_MainTex", 0);
+		
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, brickTextureNM);
-		shader.setInt("_NormalMap", 0);
+		glBindTexture(GL_TEXTURE_2D, textureNormalMap);
+		shader.setInt("_NormalMap", 1);
 
 		shader.setMaterial("_Material", material);
 		shader.setLight("_Light", light);
 		shader.setVec3("_DirectionalLight.dir", dirLight.dir);
 
-		shader.setBool("_UseNormalMap", useNormalMap);
-		shader.setBool("_UseDirectionalLight", useDirectionalLight);
-		shader.setBool("_UseShowNormals", useShowNormals);
+		shader.setBool("_UseNormalMap", settings.useNormalMap);
+		shader.setBool("_UseDirectionalLight", settings.useDirectionalLight);
+		shader.setInt("_RenderType", (int)settings.renderTypeIndex);
 
 		monkeyModel.draw();
 
@@ -129,11 +146,12 @@ void drawUI() {
 	if (ImGui::Button("Reset Camera"))
 		resetCamera(&camera, &cameraController);
 
-	ImGui::Checkbox("Use Normal Map", &useNormalMap);
-	ImGui::Checkbox("Use Directional Light", &useDirectionalLight);
-	ImGui::Checkbox("Show Normals", &useShowNormals);
+	ImGui::Checkbox("Use Normal Map", &settings.useNormalMap);
+	
+	ImGui::Combo("Render Type", &settings.renderTypeIndex, settings.renderTypeNames, IM_ARRAYSIZE(settings.renderTypeNames));
 
-	if (useDirectionalLight)
+	ImGui::Checkbox("Use Directional Light", &settings.useDirectionalLight);
+	if (settings.useDirectionalLight)
 		dirLight.drawUI();
 	else
 		light.drawUI();

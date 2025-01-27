@@ -60,7 +60,7 @@ namespace jsc {
 				ImGui::SliderFloat("AmbientK", &ambientK, 0.0f, 1.0f);
 				ImGui::SliderFloat("DiffuseK", &diffuseK, 0.0f, 1.0f);
 				ImGui::SliderFloat("SpecularK", &specularK, 0.0f, 1.0f);
-				ImGui::SliderFloat("Shininess", &shininess, 2.0f, 1024.0f);
+				ImGui::SliderFloat("Shininess", &shininess, 2.0f, 32.0f);
 			}
 		}
 	};
