@@ -10,4 +10,5 @@ namespace ew {
 	MeshData createPlane(float width, float height, int subdivisions);
 	MeshData createSphere(float radius, int subdivisions);
 	MeshData createCylinder(float radius, float height, int subdivisions);
+	MeshData createScreenQuad();
 }

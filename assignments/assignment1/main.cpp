@@ -91,7 +91,10 @@ int main() {
 	planeTransform.position = glm::vec3(0, -1.0, 0);
 
 	// TODO make this an object
-	ew::Mesh screenMesh(ew::createPlane(1, 1, 0));
+	//ew::Mesh screenMesh(ew::createPlane(2, 2, 1));
+	
+	// Testing dummy VAO
+
 
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
@@ -108,7 +111,17 @@ int main() {
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
 	// Colour attachment buffer
-	GLuint screenTexture = ew::loadScreenColorToTexture(screenWidth, screenHeight);
+	//GLuint screenTexture = ew::loadScreenColorToTexture(screenWidth, screenHeight);
+	GLuint screenTexture;
+	glGenTextures(1, &screenTexture);
+	glBindTexture(GL_TEXTURE_2D, screenTexture);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screenWidth, screenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
 
 	// RBO for depth and stencil attachment
 	GLuint rbo;
@@ -121,6 +134,8 @@ int main() {
 		printf("Frame buffer failed to attach");
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 // Render Loop ----------------------------------------------------------*/
 	while (!glfwWindowShouldClose(window)) {
@@ -177,8 +192,9 @@ int main() {
 
 		screenShader.use();
 		glBindTexture(GL_TEXTURE_2D, screenTexture);
-		//screenShader.setInt("_ScreenTexture", 0);
-		screenMesh.draw();
+		screenShader.setInt("_ScreenTexture", 0);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		//screenMesh.draw();
 
 // UI & Swap Buffers ----------------------------------------------------*/
 
