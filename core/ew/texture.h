@@ -7,4 +7,6 @@
 namespace ew {
 	unsigned int loadTexture(const char* filePath);
 	unsigned int loadTexture(const char* filePath, int wrapMode, int magFilter, int minFilter, bool mipmap);
+
+	unsigned int loadScreenColorToTexture(float width, float height); // Added
 }
