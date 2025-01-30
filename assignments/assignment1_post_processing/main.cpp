@@ -17,6 +17,7 @@
 #include <ew/procGen.h>
 
 #include <jsc/light.h>
+#include <jsc/postProcessor.h>
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
@@ -61,6 +62,11 @@ struct AppSettings {
 int main() {
 	GLFWwindow* window = initWindow("Assignment 1 - Post Processing", screenWidth, screenHeight);
 
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glEnable(GL_DEPTH_TEST);
+
+
 // Setup ----------------------------------------------------------------*/
 	light.transform.position.y = 2.0;
 
@@ -70,7 +76,8 @@ int main() {
 	camera.fov = 60.0f;
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
-	ew::Shader screenShader = ew::Shader("assets/screen.vert", "assets/screen.frag");
+	//ew::Shader screenShader = ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/screen.frag");
+	ew::Shader screenShader = ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag");
 
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Transform monkeyTransform;
@@ -87,44 +94,17 @@ int main() {
 	screenShader.use();
 	screenShader.setInt("_ScreenTexture", 1); // Cant be 0 cuz of normal map
 
-// Framebuffer Setup ----------------------------------------------------*/
+	jsc::TintShader tintShader(screenShader);
 
-	// TODO Objectify this. 
+	// TODO Finish Objectify-ing this 
 
-	unsigned int dummyVAO;
-	glCreateVertexArrays(1, &dummyVAO);
+	//jsc::PostProcessor postProcessor(screenShader, screenWidth, screenHeight);
+	jsc::PostProcessor postProcessor(tintShader.shader, screenWidth, screenHeight);
 
-	// The actual frame buffer
-	GLuint fbo;
-	glGenFramebuffers(1, &fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	//screenShader.setVec3("_TintColour", glm::vec3(1.0, 0.0, 1.0));
+	//screenShader.setFloat("_TintStrength", 0.5);
 
-	// Create and attach Colour
-	GLuint colourAttachment;
-	glGenTextures(1, &colourAttachment);
-	glBindTexture(GL_TEXTURE_2D, colourAttachment);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screenWidth, screenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourAttachment, 0);
-
-	// Used for depth and stencil buffers. tbh still not fully sure what thedeal is
-	GLuint rbo;
-	glGenRenderbuffers(1, &rbo);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screenWidth, screenHeight);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
-	// Framebuffer validation
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		printf("[Error] Framebuffer is incomplete");
-
-	// Bind it
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-	glEnable(GL_DEPTH_TEST);
+	postProcessor.createColourAttachment(screenWidth, screenHeight);
 
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
@@ -139,11 +119,7 @@ int main() {
 		camera.aspectRatio = (float)screenWidth / screenHeight;
 		cameraController.move(window, &camera, deltaTime);
 
-// Screen Shader Per Frame Setup ----------------------------------------*/
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		glEnable(GL_DEPTH_TEST);
-		glClearColor(0.6f, 0.8f, 0.92f, 1.0f); // Literally random numbers
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		postProcessor.preRender();
 
 // Uniforms & Draw ------------------------------------------------------*/
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));	
@@ -169,31 +145,63 @@ int main() {
 		shader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
 
-// Draw Screen Shader ---------------------------------------------------*/
-
-		// Bind to other fbo and disable depth testing
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glDisable(GL_DEPTH_TEST);
-		glClearColor(0.5f, 0.1f, 0.1f, 1.0f); // Different random numbers. If these show up, theres a problem lol
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		screenShader.use();
-		glBindVertexArray(dummyVAO);
-		glBindTexture(GL_TEXTURE_2D, colourAttachment);	// Colour attachment -> screen quad
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+// Post Processing ------------------------------------------------------*/
+		postProcessor.postRender();
+		tintShader.updateShader();
+		postProcessor.draw();
 
 // More -----------------------------------------------------------------*/
+		//drawUI();
 
-		drawUI();
+#pragma region UI
+
+		ImGui_ImplGlfw_NewFrame();
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui::NewFrame();
+
+		ImGui::SetNextWindowPos({ 0,0 });
+		ImGui::SetNextWindowSize({ 300, (float)screenHeight });
+		ImGui::Begin("Settings", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
+
+		if (ImGui::CollapsingHeader("Post Processing"))
+		{
+			tintShader.drawUI();
+		}
+
+
+		if (ImGui::CollapsingHeader("Sceen Settings"))
+		{
+
+			if (ImGui::Button("Reset Camera"))
+				resetCamera(&camera, &cameraController);
+
+			ImGui::Checkbox("Use Normal Map", &settings.useNormalMap);
+
+			ImGui::Combo("Render Type", &settings.renderTypeIndex, settings.renderTypeNames, IM_ARRAYSIZE(settings.renderTypeNames));
+
+			ImGui::Checkbox("Use Directional Light", &settings.useDirectionalLight);
+			if (settings.useDirectionalLight)
+				dirLight.drawUI();
+			else
+				light.drawUI();
+
+			material.drawUI();
+
+			if (ImGui::CollapsingHeader("Plane Transform")) {
+				drawTransformUI(planeTransform);
+			}
+		}
+
+
+		ImGui::End();
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+#pragma endregion
 
 		glfwSwapBuffers(window);
 	}
-
-	// Tutorial had these in here.
-	// TODO Add these to the Framebuffer class destructor or something
-	glDeleteVertexArrays(1, &dummyVAO);
-	glDeleteRenderbuffers(1, &rbo);
-	glDeleteFramebuffers(1, &fbo);
 
 	printf("Sayonara!");
 }
@@ -203,28 +211,39 @@ void drawUI() {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui::NewFrame();
 
-	ImGui::Begin("Settings");
+	ImGui::SetNextWindowPos({ 0,0 });
+	ImGui::SetNextWindowSize({ 300, (float)screenHeight });
+	ImGui::Begin("Settings", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
-	ImGui::Text("Hai");
+	if (ImGui::CollapsingHeader("Post Processing")) 
+	{
 
-	if (ImGui::Button("Reset Camera"))
-		resetCamera(&camera, &cameraController);
-
-	ImGui::Checkbox("Use Normal Map", &settings.useNormalMap);
-	
-	ImGui::Combo("Render Type", &settings.renderTypeIndex, settings.renderTypeNames, IM_ARRAYSIZE(settings.renderTypeNames));
-
-	ImGui::Checkbox("Use Directional Light", &settings.useDirectionalLight);
-	if (settings.useDirectionalLight)
-		dirLight.drawUI();
-	else
-		light.drawUI();
-	
-	material.drawUI();
-	
-	if (ImGui::CollapsingHeader("Plane Transform")) {
-		drawTransformUI(planeTransform);
 	}
+
+
+	if (ImGui::CollapsingHeader("Sceen Settings")) 
+	{
+
+		if (ImGui::Button("Reset Camera"))
+			resetCamera(&camera, &cameraController);
+
+		ImGui::Checkbox("Use Normal Map", &settings.useNormalMap);
+
+		ImGui::Combo("Render Type", &settings.renderTypeIndex, settings.renderTypeNames, IM_ARRAYSIZE(settings.renderTypeNames));
+
+		ImGui::Checkbox("Use Directional Light", &settings.useDirectionalLight);
+		if (settings.useDirectionalLight)
+			dirLight.drawUI();
+		else
+			light.drawUI();
+
+		material.drawUI();
+
+		if (ImGui::CollapsingHeader("Plane Transform")) {
+			drawTransformUI(planeTransform);
+		}
+	}
+
 
 	ImGui::End();
 
