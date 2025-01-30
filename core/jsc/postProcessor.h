@@ -104,14 +104,17 @@ namespace jsc {
 	
 }
 
-// I don't actually know where I'm going with this exactly
+// o yea I was gonna make this a while ago, it doesn't need to be for post processing, its just there to draw ui functions and update the shader uniforms outside of main
 
 namespace jsc {
 	struct PostProcessEffect
 	{
 		PostProcessEffect(ew::Shader shader) :
 			shader(shader) 
-		{}
+		{
+			shader.use();
+			shader.setInt("_ScreenTexture", 1); // This may need to be changed later
+		}
 
 		~PostProcessEffect()
 		{}

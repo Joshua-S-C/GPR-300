@@ -77,7 +77,7 @@ int main() {
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
 	//ew::Shader screenShader = ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/screen.frag");
-	ew::Shader screenShader = ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag");
+	//ew::Shader screenShader = ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag");
 
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Transform monkeyTransform;
@@ -91,10 +91,11 @@ int main() {
 	shader.setInt("_MainTex", 0);
 	shader.setInt("_NormalMap", 1);
 
-	screenShader.use();
-	screenShader.setInt("_ScreenTexture", 1); // Cant be 0 cuz of normal map
+	//screenShader.use();
+	//screenShader.setInt("_ScreenTexture", 1); // Cant be 0 cuz of normal map
 
-	jsc::TintShader tintShader(screenShader);
+	//jsc::TintShader tintShader(screenShader);
+	jsc::TintShader tintShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"));
 
 	// TODO Finish Objectify-ing this 
 
