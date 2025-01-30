@@ -166,11 +166,16 @@ int main() {
 
 		if (ImGui::CollapsingHeader("Post Processing"))
 		{
+			ImGui::Text("Screen Texture");
+			float imageShrink = 3;
+			ImVec2 imageDrawSize = ImVec2(postProcessor.getWidthHeight().x / imageShrink, postProcessor.getWidthHeight().y / imageShrink);
+			ImGui::Image((ImTextureID)postProcessor.getColourAttachment(), imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
+
 			tintShader.drawUI();
 		}
 
 
-		if (ImGui::CollapsingHeader("Sceen Settings"))
+		if (ImGui::CollapsingHeader("Scene Settings"))
 		{
 
 			if (ImGui::Button("Reset Camera"))
@@ -207,6 +212,7 @@ int main() {
 	printf("Sayonara!");
 }
 
+// I think about this later
 void drawUI() {
 	ImGui_ImplGlfw_NewFrame();
 	ImGui_ImplOpenGL3_NewFrame();
@@ -222,7 +228,7 @@ void drawUI() {
 	}
 
 
-	if (ImGui::CollapsingHeader("Sceen Settings")) 
+	if (ImGui::CollapsingHeader("Scene Settings")) 
 	{
 
 		if (ImGui::Button("Reset Camera"))

@@ -27,11 +27,19 @@ namespace jsc {
 
 		void createColourAttachment(unsigned int width, unsigned int height);
 
+		GLuint getColourAttachment() {
+			return colourAttachment;
+		}
+
+		glm::vec2 getWidthHeight() {
+			return glm::vec2(width, height);
+		}
+
 	private:
 		unsigned int width, height;
 		GLuint FBO, RBO, VAO;
 
-		GLuint colourAttachment;
+		GLuint colourAttachment;	// The texture
 	};
 
 	PostProcessor::PostProcessor(ew::Shader shader, unsigned int width, unsigned int height) :
@@ -105,7 +113,7 @@ namespace jsc {
 }
 
 // o yea I was gonna make this a while ago, it doesn't need to be for post processing, its just there to draw ui functions and update the shader uniforms outside of main
-
+	
 namespace jsc {
 	struct PostProcessEffect
 	{
@@ -145,11 +153,12 @@ namespace jsc {
 		}
 
 		void drawUI() {
-			if (ImGui::CollapsingHeader("Tint Shader"))
-			{
+			ImGui::Text("Tint Shader");
+			//if (ImGui::CollapsingHeader("Tint Shader"))
+			//{
 				ImGui::ColorPicker3("Tint Colour", &tintColour.x);
 				ImGui::DragFloat("Strength", &tintStrength, 0.001, 0, 1);
-			}
+			//}
 		}
 
 		void updateShader() {
