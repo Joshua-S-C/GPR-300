@@ -31,6 +31,8 @@ int screenHeight = 720;
 float prevFrameTime;
 float deltaTime;
 
+float guiWidth = 300;
+
 ew::CameraController cameraController;
 ew::Camera camera;
 
@@ -66,7 +68,6 @@ int main() {
 	glCullFace(GL_BACK);
 	glEnable(GL_DEPTH_TEST);
 
-
 // Setup ----------------------------------------------------------------*/
 	light.transform.position.y = 2.0;
 
@@ -76,8 +77,6 @@ int main() {
 	camera.fov = 60.0f;
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
-	//ew::Shader screenShader = ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/screen.frag");
-	//ew::Shader screenShader = ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag");
 
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Transform monkeyTransform;
@@ -90,20 +89,11 @@ int main() {
 	shader.use();
 	shader.setInt("_MainTex", 0);
 	shader.setInt("_NormalMap", 1);
+	
+	jsc::PostProcessEffect* tintShader2 = new jsc::TintShader(ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"));
+	jsc::PostProcessEffect* negativeShader2 = new jsc::NegativeShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/negative.frag"));
 
-	//screenShader.use();
-	//screenShader.setInt("_ScreenTexture", 1); // Cant be 0 cuz of normal map
-
-	//jsc::TintShader tintShader(screenShader);
-	jsc::TintShader tintShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"));
-
-	// TODO Finish Objectify-ing this 
-
-	//jsc::PostProcessor postProcessor(screenShader, screenWidth, screenHeight);
-	jsc::PostProcessor postProcessor(tintShader.shader, screenWidth, screenHeight);
-
-	//screenShader.setVec3("_TintColour", glm::vec3(1.0, 0.0, 1.0));
-	//screenShader.setFloat("_TintStrength", 0.5);
+	jsc::PostProcessor postProcessor(tintShader2, screenWidth, screenHeight);
 
 	postProcessor.createColourAttachment(screenWidth, screenHeight);
 
@@ -148,7 +138,8 @@ int main() {
 
 // Post Processing ------------------------------------------------------*/
 		postProcessor.postRender();
-		tintShader.updateShader();
+		postProcessor.effect->updateShader();
+
 		postProcessor.draw();
 
 // More -----------------------------------------------------------------*/
@@ -161,17 +152,25 @@ int main() {
 		ImGui::NewFrame();
 
 		ImGui::SetNextWindowPos({ 0,0 });
-		ImGui::SetNextWindowSize({ 300, (float)screenHeight });
+		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Settings", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
 		if (ImGui::CollapsingHeader("Post Processing"))
 		{
 			ImGui::Text("Screen Texture");
-			float imageShrink = 3;
-			ImVec2 imageDrawSize = ImVec2(postProcessor.getWidthHeight().x / imageShrink, postProcessor.getWidthHeight().y / imageShrink);
+			float ratio = guiWidth / postProcessor.getWidthHeight().x;
+			ImVec2 imageDrawSize = ImVec2(postProcessor.getWidthHeight().x * ratio, postProcessor.getWidthHeight().y * ratio);
 			ImGui::Image((ImTextureID)postProcessor.getColourAttachment(), imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
 
-			tintShader.drawUI();
+			// TODO Dropdown this or something
+
+			if (ImGui::Button("Tint Shader"))
+				postProcessor.effect = tintShader2;
+
+			if (ImGui::Button("Negative Shader"))
+				postProcessor.effect = negativeShader2;
+
+			postProcessor.effect->drawUI();
 		}
 
 
@@ -197,7 +196,6 @@ int main() {
 				drawTransformUI(planeTransform);
 			}
 		}
-
 
 		ImGui::End();
 

@@ -1,14 +1,86 @@
 #include "../ew/shader.h"
 #include <imgui.h>
 
+// o yea I was gonna make this a while ago, it doesn't need to be for post processing, its just there to draw ui functions and update the shader uniforms outside of main
+namespace jsc {
+	struct PostProcessEffect
+	{
+		PostProcessEffect(ew::Shader shader) :
+			shader(shader)
+		{
+			shader.use();
+			shader.setInt("_ScreenTexture", 1); // This may need to be changed later
+		}
+
+		~PostProcessEffect()
+		{}
+
+		ew::Shader shader;
+
+		//std::string relativePath; // TODO this maybe idk
+
+		virtual void drawUI() = 0;
+
+		virtual void updateShader() = 0;
+	};
+
+	struct TintShader : public PostProcessEffect
+	{
+		float tintStrength = 0.5;
+		glm::vec3 tintColour = glm::vec3(1.0, 0.0, 1.0);
+
+		TintShader(ew::Shader shader) :
+			PostProcessEffect(shader)
+		{
+			updateShader();
+		}
+
+		void drawUI() {
+			ImGui::Text("Tint Shader");
+			ImGui::DragFloat("Strength", &tintStrength, 0.001, 0, 1);
+			ImGui::ColorPicker3("Tint Colour", &tintColour.x);
+		}
+
+		void updateShader() {
+			shader.use();
+			shader.setFloat("_TintStrength", tintStrength);
+			shader.setVec3("_TintColour", tintColour);
+		}
+	};
+
+	struct NegativeShader : public PostProcessEffect
+	{
+		bool active = true;
+
+		NegativeShader(ew::Shader shader) :
+			PostProcessEffect(shader)
+		{
+			updateShader();
+		}
+
+		void drawUI() {
+			ImGui::Text("Negative Shader");
+			ImGui::Checkbox("Active", &active);
+		}
+
+		void updateShader() {
+			shader.use();
+			shader.setBool("_Active", active);
+		}
+	};
+}
+
 namespace jsc {
 	class PostProcessor
 	{
 	public:
 		PostProcessor(ew::Shader shader, unsigned int width, unsigned int height);
+		PostProcessor(PostProcessEffect* effect, unsigned int width, unsigned int height);
 		~PostProcessor();
 
-		ew::Shader shader; // The power is in our hands
+		//ew::Shader shader; // The power is in our hands // jk
+			
+		PostProcessEffect* effect = nullptr;
 
 		/// <summary>
 		/// Called at the start of Render Loop
@@ -42,8 +114,9 @@ namespace jsc {
 		GLuint colourAttachment;	// The texture
 	};
 
+	// cringe constructor that Im too lazy to move even though I couldve done it in the time I typed this comment
 	PostProcessor::PostProcessor(ew::Shader shader, unsigned int width, unsigned int height) :
-		shader(shader), width(width), height(height)
+		/*shader(shader),*/ width(width), height(height)
 	{
 		// Dummy VAO
 		glCreateVertexArrays(1, &VAO);
@@ -63,6 +136,12 @@ namespace jsc {
 		// Framebuffer validation
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			printf("[Error] Framebuffer is incomplete");
+	}
+
+	PostProcessor::PostProcessor(PostProcessEffect* effect, unsigned int width, unsigned int height) :
+		PostProcessor(effect->shader, width, height)
+	{
+		this->effect = effect;
 	}
 
 	PostProcessor::~PostProcessor()
@@ -91,7 +170,8 @@ namespace jsc {
 	
 	void PostProcessor::draw()
 	{
-		shader.use();
+		//shader.use();
+		effect->shader.use();
 		glBindVertexArray(VAO);
 		glBindTexture(GL_TEXTURE_2D, colourAttachment);	// Colour attachment -> screen quad
 		glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -112,59 +192,3 @@ namespace jsc {
 	
 }
 
-// o yea I was gonna make this a while ago, it doesn't need to be for post processing, its just there to draw ui functions and update the shader uniforms outside of main
-	
-namespace jsc {
-	struct PostProcessEffect
-	{
-		PostProcessEffect(ew::Shader shader) :
-			shader(shader) 
-		{
-			shader.use();
-			shader.setInt("_ScreenTexture", 1); // This may need to be changed later
-		}
-
-		~PostProcessEffect()
-		{}
-
-		ew::Shader shader;
-
-		std::string relativePath; // TODO this maybe idk
-
-		virtual void drawUI() = 0;
-
-		virtual void updateShader() = 0;
-	};
-
-	struct TintShader : public PostProcessEffect 
-	{
-		glm::vec3 tintColour;
-		float tintStrength;
-
-		TintShader(ew::Shader shader) :
-			PostProcessEffect(shader)
-		{
-			//shader = ew::Shader("post_processing_effects/screen.vert", "post_processing_effects/tint.frag");
-
-			//this->shader = shader;
-			
-			tintColour = glm::vec3(1.0, 0.0, 1.0);
-			tintStrength = 0.5;
-		}
-
-		void drawUI() {
-			ImGui::Text("Tint Shader");
-			//if (ImGui::CollapsingHeader("Tint Shader"))
-			//{
-				ImGui::ColorPicker3("Tint Colour", &tintColour.x);
-				ImGui::DragFloat("Strength", &tintStrength, 0.001, 0, 1);
-			//}
-		}
-
-		void updateShader() {
-			shader.use();
-			shader.setVec3("_TintColour", tintColour);
-			shader.setFloat("_TintStrength", tintStrength);
-		}
-	};
-}
