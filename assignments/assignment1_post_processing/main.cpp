@@ -18,8 +18,6 @@
 
 #include <jsc/light.h>
 
-#pragma region Global Stuff
-
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
 void drawUI();
@@ -59,83 +57,76 @@ struct AppSettings {
 	};
 }settings;
 
-#pragma endregion
 
 int main() {
-	GLFWwindow* window = initWindow("Assignment 1", screenWidth, screenHeight);
-	//glEnable(GL_CULL_FACE);
-	//glCullFace(GL_BACK); //Back face culling
-	glEnable(GL_DEPTH_TEST); //Depth testing
+	GLFWwindow* window = initWindow("Assignment 1 - Post Processing", screenWidth, screenHeight);
 
 // Setup ----------------------------------------------------------------*/
+	light.transform.position.y = 2.0;
+
+	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
+	camera.target = glm::vec3(0.0f, 0.0f, 0.0f);
+	camera.aspectRatio = (float)screenWidth / screenHeight;
+	camera.fov = 60.0f;
+
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
 	ew::Shader screenShader = ew::Shader("assets/screen.vert", "assets/screen.frag");
-	// TODO Fix the fact that the base directory is assignment 0
+
+	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
+	ew::Transform monkeyTransform;
+	GLuint texture = ew::loadTexture("assets/Sand_Texture/Ground080_1K-PNG_Color.png");
+	GLuint normalMap = ew::loadTexture("assets/Sand_Texture/Ground080_1K-PNG_NormalDX.png");
+
+	ew::Mesh planeMesh(ew::createPlane(10, 10, 2));
+	planeTransform.position = glm::vec3(0, -1.0, 0);
 
 	shader.use();
 	shader.setInt("_MainTex", 0);
 	shader.setInt("_NormalMap", 1);
 
 	screenShader.use();
-	screenShader.setInt("_ScreenTexture", 0);
+	screenShader.setInt("_ScreenTexture", 1); // Cant be 0 cuz of normal map
 
-	light.transform.position.y = 2.0;
+// Framebuffer Setup ----------------------------------------------------*/
 
-	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
-	ew::Transform monkeyTransform;
+	// TODO Objectify this. 
 
-	GLuint texture = ew::loadTexture("assets/Sand_Texture/Ground080_1K-PNG_Color.png");
-	GLuint textureNormalMap = ew::loadTexture("assets/Sand_Texture/Ground080_1K-PNG_NormalGL.png");
+	unsigned int dummyVAO;
+	glCreateVertexArrays(1, &dummyVAO);
 
-	ew::Mesh planeMesh(ew::createPlane(10, 10, 2));
-	planeTransform.position = glm::vec3(0, -1.0, 0);
-
-	// TODO make this an object
-	//ew::Mesh screenMesh(ew::createPlane(2, 2, 1));
-	
-	// Testing dummy VAO
-
-
-	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
-	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
-	camera.aspectRatio = (float)screenWidth / screenHeight;
-	camera.fov = 60.0f; //Vertical field of view, in degrees
-
-	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
-
-// Framebuffer ----------------------------------------------------------*/
-
-	// Frame buffer
+	// The actual frame buffer
 	GLuint fbo;
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
-	// Colour attachment buffer
-	//GLuint screenTexture = ew::loadScreenColorToTexture(screenWidth, screenHeight);
-	GLuint screenTexture;
-	glGenTextures(1, &screenTexture);
-	glBindTexture(GL_TEXTURE_2D, screenTexture);
-
+	// Create and attach Colour
+	GLuint colourAttachment;
+	glGenTextures(1, &colourAttachment);
+	glBindTexture(GL_TEXTURE_2D, colourAttachment);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screenWidth, screenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourAttachment, 0);
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-
-
-	// RBO for depth and stencil attachment
+	// Used for depth and stencil buffers. tbh still not fully sure what thedeal is
 	GLuint rbo;
 	glGenRenderbuffers(1, &rbo);
 	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screenWidth, screenHeight);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
+	// Framebuffer validation
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		printf("Frame buffer failed to attach");
+		printf("[Error] Framebuffer is incomplete");
 
+	// Bind it
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glEnable(GL_DEPTH_TEST);
+
+	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
 // Render Loop ----------------------------------------------------------*/
 	while (!glfwWindowShouldClose(window)) {
@@ -148,12 +139,10 @@ int main() {
 		camera.aspectRatio = (float)screenWidth / screenHeight;
 		cameraController.move(window, &camera, deltaTime);
 
-// Set up Screen Shader -------------------------------------------------*/
+// Screen Shader Per Frame Setup ----------------------------------------*/
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glEnable(GL_DEPTH_TEST);
-
-		//RENDER
-		glClearColor(0.6f,0.8f,0.92f,1.0f);
+		glClearColor(0.6f, 0.8f, 0.92f, 1.0f); // Literally random numbers
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 // Uniforms & Draw ------------------------------------------------------*/
@@ -165,43 +154,47 @@ int main() {
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture);
-		shader.setInt("_MainTex", 0);
 		
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, textureNormalMap);
-		shader.setInt("_NormalMap", 1);
+		glBindTexture(GL_TEXTURE_2D, normalMap);
 
 		shader.setMaterial("_Material", material);
 		shader.setLight("_Light", light);
 		shader.setVec3("_DirectionalLight.dir", dirLight.dir);
-
 		shader.setBool("_UseNormalMap", settings.useNormalMap);
 		shader.setBool("_UseDirectionalLight", settings.useDirectionalLight);
-		shader.setInt("_RenderType", (int)settings.renderTypeIndex);
 
 		monkeyModel.draw();
 
 		shader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
 
-// Screen Shader --------------------------------------------------------*/
+// Draw Screen Shader ---------------------------------------------------*/
+
+		// Bind to other fbo and disable depth testing
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glDisable(GL_DEPTH_TEST);		
-		glClearColor(0.5f, 0.1f, 0.1f, 1.0f);
+		glDisable(GL_DEPTH_TEST);
+		glClearColor(0.5f, 0.1f, 0.1f, 1.0f); // Different random numbers. If these show up, theres a problem lol
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		screenShader.use();
-		glBindTexture(GL_TEXTURE_2D, screenTexture);
-		screenShader.setInt("_ScreenTexture", 0);
+		glBindVertexArray(dummyVAO);
+		glBindTexture(GL_TEXTURE_2D, colourAttachment);	// Colour attachment -> screen quad
 		glDrawArrays(GL_TRIANGLES, 0, 3);
-		//screenMesh.draw();
 
-// UI & Swap Buffers ----------------------------------------------------*/
+// More -----------------------------------------------------------------*/
 
 		drawUI();
 
 		glfwSwapBuffers(window);
 	}
+
+	// Tutorial had these in here.
+	// TODO Add these to the Framebuffer class destructor or something
+	glDeleteVertexArrays(1, &dummyVAO);
+	glDeleteRenderbuffers(1, &rbo);
+	glDeleteFramebuffers(1, &fbo);
+
 	printf("Sayonara!");
 }
 

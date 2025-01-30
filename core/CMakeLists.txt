@@ -15,7 +15,7 @@ set(CORE_INC_DIR
  CACHE PATH "CORE INCLUDE SOURCE PATH"
 )
 
-add_library(core STATIC ${CORE_SRC} ${CORE_INC} "jsc/moreShaderFuncs.cpp" "jsc/moreProcGen.cpp")
+add_library(core STATIC ${CORE_SRC} ${CORE_INC} "jsc/moreShaderFuncs.cpp")
 
 find_package(OpenGL REQUIRED)
 
