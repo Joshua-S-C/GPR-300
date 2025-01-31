@@ -26,7 +26,17 @@ namespace jsc {
 		void render(GLuint frameBuffer = 0);
 		void draw(GLuint frameBuffer = 0);
 
-		void createColourAttachment(unsigned int width, unsigned int height);
+		void updateTextureIndex(int screenTexIndexStart = 1) {
+			int i = 0;
+
+			for each(PostProcessEffect * effect in effects)
+			{
+				effect->updateTextureIndex(screenTexIndexStart + i);
+				i++;
+			}
+		}
+
+		//void createColourAttachment(unsigned int width, unsigned int height);
 
 		void drawUI() {
 			for each (PostProcessEffect* effect in effects)

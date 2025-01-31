@@ -27,6 +27,10 @@ namespace jsc {
 			glDrawArrays(GL_TRIANGLES, 0, 3);
 		}
 
+		void updateTextureIndex(int screenTexIndex) {
+			shader.setInt("_ScreenTexture", screenTexIndex); // This may need to be changed later
+		}
+
 		// TODO Make UI work when having 2 of the same effect (doesn't work cuz the UI parts have the exact same names)
 		virtual void drawUI() = 0;
 

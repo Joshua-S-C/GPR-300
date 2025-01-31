@@ -161,6 +161,7 @@ int main() {
 
 		if (ImGui::CollapsingHeader("Post Processing"))
 		{
+			ImGui::Indent();
 			// Same thing as below but for more than 2 effects (ignore that its not scaled properly)
 			postProcessor.drawDebuggingUI();
 
@@ -172,14 +173,25 @@ int main() {
 			ImGui::Text("Screen Texture 1");
 			ImGui::Image((ImTextureID)postProcessor.getColourTextures()[1], imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
 
-			// TODO Dropdown or something
+			// TODO Reording
+			// Look at for Drag and Drop
+			// https://github.com/ocornut/imgui/issues/1931
+			if (ImGui::Button("Swap Effect Order")) {
+				EffectsList tempList = postProcessor.effects;
+				tempList[0] = postProcessor.effects[1];
+				tempList[1] = postProcessor.effects[0];
+				postProcessor.effects = tempList;
+				postProcessor.updateTextureIndex();
+			}
 
 			postProcessor.drawUI();
+			ImGui::Unindent();
 		}
 
 
 		if (ImGui::CollapsingHeader("Scene Settings"))
 		{
+			ImGui::Indent();
 
 			if (ImGui::Button("Reset Camera"))
 				resetCamera(&camera, &cameraController);
@@ -199,6 +211,8 @@ int main() {
 			if (ImGui::CollapsingHeader("Plane Transform")) {
 				drawTransformUI(planeTransform);
 			}
+
+			ImGui::Unindent();
 		}
 
 		ImGui::End();
