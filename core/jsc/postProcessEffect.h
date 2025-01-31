@@ -24,7 +24,7 @@ namespace jsc {
 			shader.use();
 			updateShader();
 			glBindTexture(GL_TEXTURE_2D, texture);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
+			glDrawArrays(GL_TRIANGLES, 0, 3);
 		}
 
 		// TODO Make UI work when having 2 of the same effect (doesn't work cuz the UI parts have the exact same names)
