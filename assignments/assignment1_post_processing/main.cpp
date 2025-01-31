@@ -19,6 +19,8 @@
 #include <jsc/light.h>
 #include <jsc/postProcessor.h>
 
+typedef std::vector<jsc::PostProcessEffect*> EffectsList;
+
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
 void drawUI();
@@ -90,12 +92,15 @@ int main() {
 	shader.setInt("_MainTex", 0);
 	shader.setInt("_NormalMap", 1);
 	
-	jsc::PostProcessEffect* tintShader2 = new jsc::TintShader(ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"));
-	jsc::PostProcessEffect* negativeShader2 = new jsc::NegativeShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/negative.frag"));
+	// Post Processing Setup
+	jsc::PostProcessEffect* tintShader = new jsc::TintShader(ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"), 1);
+	jsc::PostProcessEffect* negativeShader = new jsc::NegativeShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/negative.frag"), 2);
 
-	jsc::PostProcessor postProcessor(tintShader2, screenWidth, screenHeight);
+	EffectsList effects;
+	effects.push_back(tintShader);
+	effects.push_back(negativeShader);
 
-	postProcessor.createColourAttachment(screenWidth, screenHeight);
+	jsc::PostProcessor postProcessor(effects, screenWidth, screenHeight);
 
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
@@ -137,9 +142,8 @@ int main() {
 		planeMesh.draw();
 
 // Post Processing ------------------------------------------------------*/
-		postProcessor.postRender();
-		postProcessor.effect->updateShader();
 
+		postProcessor.render();
 		postProcessor.draw();
 
 // More -----------------------------------------------------------------*/
@@ -157,20 +161,20 @@ int main() {
 
 		if (ImGui::CollapsingHeader("Post Processing"))
 		{
+			// Same thing as below but for more than 2 effects (ignore that its not scaled properly)
+			postProcessor.drawDebuggingUI();
+
 			ImGui::Text("Screen Texture");
 			float ratio = guiWidth / postProcessor.getWidthHeight().x;
 			ImVec2 imageDrawSize = ImVec2(postProcessor.getWidthHeight().x * ratio, postProcessor.getWidthHeight().y * ratio);
-			ImGui::Image((ImTextureID)postProcessor.getColourAttachment(), imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
+			ImGui::Image((ImTextureID)postProcessor.getColourTextures()[0], imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
+			
+			ImGui::Text("Screen Texture 1");
+			ImGui::Image((ImTextureID)postProcessor.getColourTextures()[1], imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
 
-			// TODO Dropdown this or something
+			// TODO Dropdown or something
 
-			if (ImGui::Button("Tint Shader"))
-				postProcessor.effect = tintShader2;
-
-			if (ImGui::Button("Negative Shader"))
-				postProcessor.effect = negativeShader2;
-
-			postProcessor.effect->drawUI();
+			postProcessor.drawUI();
 		}
 
 
