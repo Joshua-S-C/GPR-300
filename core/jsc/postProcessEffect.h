@@ -3,6 +3,11 @@
 
 // o yea I was gonna make this a while ago, it doesn't need to be for post processing, its just there to draw ui functions and update the shader uniforms outside of main
 namespace jsc {
+
+	/// <summary>
+	/// Base class for Post Processing Effects
+	/// Add these to the effect List on Post Processor
+	/// </summary>
 	struct PostProcessEffect
 	{
 		PostProcessEffect(ew::Shader shader, int screenTexIndex) :
@@ -20,6 +25,11 @@ namespace jsc {
 		// TODO this maybe idk
 		//std::string relativePath; 
 
+		// TODO Make UI work when having 2 of the same effect (doesn't work cuz the UI parts have the exact same names)
+		virtual void drawUI() = 0;
+
+		virtual void updateShader() = 0;
+
 		void renderToTexture(GLuint texture) {
 			shader.use();
 			updateShader();
@@ -30,11 +40,25 @@ namespace jsc {
 		void updateTextureIndex(int screenTexIndex) {
 			shader.setInt("_ScreenTexture", screenTexIndex); // This may need to be changed later
 		}
+	};
 
-		// TODO Make UI work when having 2 of the same effect (doesn't work cuz the UI parts have the exact same names)
-		virtual void drawUI() = 0;
+	/// <summary>
+	/// Draws the scene as normal, with no effects
+	/// </summary>
+	struct PassthroughShader : public PostProcessEffect {
+		PassthroughShader(ew::Shader shader, int screenTexIndex) :
+			PostProcessEffect(shader, screenTexIndex)
+		{
+			updateShader();
+		}
 
-		virtual void updateShader() = 0;
+		void drawUI() {
+			ImGui::Text("Passthrough Shader");
+		}
+
+		void updateShader() {
+			shader.use();
+		}
 	};
 
 	struct TintShader : public PostProcessEffect
@@ -81,4 +105,44 @@ namespace jsc {
 			shader.setBool("_Active", active);
 		}
 	};
+
+	struct DepthShader : public PostProcessEffect {
+		DepthShader(ew::Shader shader, int screenTexIndex) :
+			PostProcessEffect(shader, screenTexIndex)
+		{
+			updateShader();
+			//shader.setInt("_DepthTexture", screenTexIndex);
+		}
+
+		void drawUI() {
+			ImGui::Text("Depth Shader");
+		}
+
+		void updateShader() {
+			shader.use();
+		}
+
+		void renderToTexture(GLuint texture) {
+			shader.use();
+			updateShader();
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+		}
+	};
+
+	//struct FogShader : public PostProcessEffect
+	//{
+	//	glm::vec3 fogColour = glm::vec3(1.0, 0.0, 1.0);
+
+	//	void drawUI() {
+	//		ImGui::Text("Fog Shader");
+	//		ImGui::ColorPicker3("Fog Colour", &fogColour.x);
+
+	//	}
+
+	//	void updateShader() {
+	//		shader.use();
+
+	//	}
+	//};
 }

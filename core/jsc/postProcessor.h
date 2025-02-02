@@ -24,6 +24,7 @@ namespace jsc {
 		/// Call this after objects are drawn. Renders and draws
 		/// </summary>
 		void render(GLuint frameBuffer = 0);
+
 		void draw(GLuint frameBuffer = 0);
 
 		void updateTextureIndex(int screenTexIndexStart = 1) {
@@ -92,6 +93,10 @@ namespace jsc {
 
 		GLuint texClr[2];	// Colour attachments
 
+		// TODO Create List of 2 more GLuint, init them as depth textures, 
+
+		GLuint texDepth;
+
 		std::vector<GLuint> debug_texClr;	// Testing Colour attachments. For when theres more than 2 effects
 	};
 
@@ -113,7 +118,10 @@ namespace jsc {
 			glGenTextures(1, &texClr[i]);
 			glActiveTexture(GL_TEXTURE0 + i + textureIndexOffset);
 			glBindTexture(GL_TEXTURE_2D, texClr[i]);
+			
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+			//glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -131,6 +139,25 @@ namespace jsc {
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glEnable(GL_DEPTH_TEST);
+
+		/*TESTING*/
+		// Creating a depth texture in texDepth
+
+		glGenFramebuffers(1, &texDepth);
+		glBindFramebuffer(GL_FRAMEBUFFER, texDepth);
+
+		glGenTextures(1, &texDepth);
+		glBindTexture(GL_TEXTURE_2D, texDepth);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texDepth, 0);
 
 		// Framebuffer validation
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -175,7 +202,10 @@ namespace jsc {
 	// https://research.ncl.ac.uk/game/mastersdegree/graphicsforgames/postprocessing/Tutorial%2010%20-%20Post%20Processing.pdf
 	// https://github.com/thoxey/ezPP/tree/master
 	// https://www.reddit.com/r/opengl/comments/patqpn/can_i_apply_the_same_post_processing_multiple/
-
+	
+	/// <summary>
+	/// Call this after objects are drawn. Renders and draws
+	/// </summary>
 	void PostProcessor::render(GLuint frameBuffer) 
 	{
 		debug_texClr.clear();
@@ -185,6 +215,14 @@ namespace jsc {
 		glDisable(GL_STENCIL_TEST);
 		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glBindVertexArray(VAO);
+
+		/*Testing Depth*/
+		glClearColor(1.0f, 0.0f, 0.0f, 1.0f); // Red ig idk
+		glBindFramebuffer(GL_FRAMEBUFFER, texDepth);
+		effects[0]->renderToTexture(texDepth);
+		debug_texClr.push_back(texDepth);
+		return;
+
 
 		//------------------------------------------------------*
 		//		   _											|

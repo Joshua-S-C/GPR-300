@@ -91,14 +91,20 @@ int main() {
 	shader.use();
 	shader.setInt("_MainTex", 0);
 	shader.setInt("_NormalMap", 1);
+
+	std::string ppPath = "assets/post_processing_effects/";
 	
 	// Post Processing Setup
-	jsc::PostProcessEffect* tintShader = new jsc::TintShader(ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"), 1);
-	jsc::PostProcessEffect* negativeShader = new jsc::NegativeShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/negative.frag"), 2);
+	//jsc::PostProcessEffect* tintShader = new jsc::TintShader(ew::Shader(ppPath + "screen.vert", ppPath + "tint.frag"), 1);
+	//jsc::PostProcessEffect* negativeShader = new jsc::NegativeShader( ew::Shader(ppPath + "screen.vert", ppPath + "negative.frag"), 2);
+	jsc::PostProcessEffect* depthShader = new jsc::DepthShader( ew::Shader(ppPath + "screen.vert", ppPath + "depth.frag"), 1);
+	//jsc::PostProcessEffect* passthroughShader = new jsc::PassthroughShader( ew::Shader(ppPath + "screen.vert", ppPath + "screen.frag"), 1);
 
 	EffectsList effects;
-	effects.push_back(tintShader);
-	effects.push_back(negativeShader);
+	//effects.push_back(tintShader);
+	//effects.push_back(negativeShader);
+	effects.push_back(depthShader);
+	//effects.push_back(passthroughShader);
 
 	jsc::PostProcessor postProcessor(effects, screenWidth, screenHeight);
 
@@ -176,7 +182,7 @@ int main() {
 			// TODO Reording
 			// Look at for Drag and Drop
 			// https://github.com/ocornut/imgui/issues/1931
-			if (ImGui::Button("Swap Effect Order")) {
+			if (ImGui::Button("[TEMP] Swap Effect Order")) {
 				EffectsList tempList = postProcessor.effects;
 				tempList[0] = postProcessor.effects[1];
 				tempList[1] = postProcessor.effects[0];

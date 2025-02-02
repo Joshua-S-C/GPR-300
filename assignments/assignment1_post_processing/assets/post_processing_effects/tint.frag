@@ -6,7 +6,6 @@ in Surface{
 	vec2 UV;
 }fs_in;
 
-
 uniform sampler2D _ScreenTexture;
 
 uniform vec3 _TintColour;
