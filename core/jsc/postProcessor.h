@@ -95,6 +95,7 @@ namespace jsc {
 
 		// TODO Create List of 2 more GLuint, init them as depth textures, 
 
+		GLuint depthFbo;
 		GLuint texDepth;
 
 		std::vector<GLuint> debug_texClr;	// Testing Colour attachments. For when theres more than 2 effects
@@ -106,6 +107,8 @@ namespace jsc {
 		this->effects = effects;
 
 		textureIndexOffset = effects.size() - 1;
+
+		/*
 
 		// Ping Pong Setup
 		for (int i = 0; i < 2; i++)
@@ -140,28 +143,37 @@ namespace jsc {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glEnable(GL_DEPTH_TEST);
 
+
+		// Framebuffer validation
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			printf("[Error] Framebuffer is incomplete");
+
+		*/
+
 		/*TESTING*/
 		// Creating a depth texture in texDepth
 
-		glGenFramebuffers(1, &texDepth);
-		glBindFramebuffer(GL_FRAMEBUFFER, texDepth);
+		glCreateFramebuffers(1, &depthFbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, depthFbo);
 
 		glGenTextures(1, &texDepth);
 		glBindTexture(GL_TEXTURE_2D, texDepth);
+
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texDepth, 0);
 
 		// Framebuffer validation
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			printf("[Error] Framebuffer is incomplete");
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		// Dummy VAO
 		glCreateVertexArrays(1, &VAO);
@@ -180,12 +192,21 @@ namespace jsc {
 		glDeleteRenderbuffers(1, &RBO[0]);
 		glDeleteRenderbuffers(1, &RBO[1]);
 
+		glDeleteFramebuffers(1, &depthFbo);
+
 		for each (auto var in effects)
 			delete(var);
 	}
 
 	void PostProcessor::preRender()
 	{
+		glEnable(GL_DEPTH_TEST);
+		glBindFramebuffer(GL_FRAMEBUFFER, depthFbo);
+		glClearColor(0.6f, 0.8f, 0.92f, 1.0f); // Literally random numbers
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glBindFramebuffer(GL_FRAMEBUFFER, depthFbo);
+		return;
+
 		for (int i = 0; i < 2; i++)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, FBO[i]);

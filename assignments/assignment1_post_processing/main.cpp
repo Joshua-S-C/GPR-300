@@ -106,7 +106,32 @@ int main() {
 	effects.push_back(depthShader);
 	//effects.push_back(passthroughShader);
 
-	jsc::PostProcessor postProcessor(effects, screenWidth, screenHeight);
+	//jsc::PostProcessor postProcessor(effects, screenWidth, screenHeight);
+
+	GLuint fbo; 
+	GLuint depthBuffer;
+	glCreateFramebuffers(1, &fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+	glGenTextures(1, &depthBuffer);
+	glBindTexture(GL_TEXTURE_2D, depthBuffer);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, screenWidth, screenHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthBuffer, 0);
+
+	glDrawBuffer(GL_NONE);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	GLuint dummyVAO;
+	glCreateVertexArrays(1, &dummyVAO);
 
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
@@ -121,7 +146,11 @@ int main() {
 		camera.aspectRatio = (float)screenWidth / screenHeight;
 		cameraController.move(window, &camera, deltaTime);
 
-		postProcessor.preRender();
+		//postProcessor.preRender();
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		glViewport(0, 0, screenWidth, screenHeight);
+		glClearColor(1.0, 0.0, 0.0, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 // Uniforms & Draw ------------------------------------------------------*/
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));	
@@ -149,8 +178,20 @@ int main() {
 
 // Post Processing ------------------------------------------------------*/
 
-		postProcessor.render();
-		postProcessor.draw();
+		//postProcessor.render();
+		//postProcessor.draw();
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, screenWidth, screenHeight);
+		glClearColor(1.0, 1.0, 0.0, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glBindTextureUnit(0, depthBuffer);
+		effects[0]->shader.use();
+		glBindVertexArray(dummyVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		
 
 // More -----------------------------------------------------------------*/
 		//drawUI();
@@ -164,35 +205,40 @@ int main() {
 		ImGui::SetNextWindowPos({ 0,0 });
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Settings", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
+		
+		float ratio = guiWidth / screenWidth;
 
-		if (ImGui::CollapsingHeader("Post Processing"))
-		{
-			ImGui::Indent();
-			// Same thing as below but for more than 2 effects (ignore that its not scaled properly)
-			postProcessor.drawDebuggingUI();
+		ImGui::Image((ImTextureID)depthBuffer, ImVec2(screenWidth * ratio, screenHeight * ratio), ImVec2(0, 1), ImVec2(1, 0));
 
-			ImGui::Text("Screen Texture");
-			float ratio = guiWidth / postProcessor.getWidthHeight().x;
-			ImVec2 imageDrawSize = ImVec2(postProcessor.getWidthHeight().x * ratio, postProcessor.getWidthHeight().y * ratio);
-			ImGui::Image((ImTextureID)postProcessor.getColourTextures()[0], imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
-			
-			ImGui::Text("Screen Texture 1");
-			ImGui::Image((ImTextureID)postProcessor.getColourTextures()[1], imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
 
-			// TODO Reording
-			// Look at for Drag and Drop
-			// https://github.com/ocornut/imgui/issues/1931
-			if (ImGui::Button("[TEMP] Swap Effect Order")) {
-				EffectsList tempList = postProcessor.effects;
-				tempList[0] = postProcessor.effects[1];
-				tempList[1] = postProcessor.effects[0];
-				postProcessor.effects = tempList;
-				postProcessor.updateTextureIndex();
-			}
+		//if (ImGui::CollapsingHeader("Post Processing"))
+		//{
+		//	ImGui::Indent();
+		//	// Same thing as below but for more than 2 effects (ignore that its not scaled properly)
+		//	postProcessor.drawDebuggingUI();
 
-			postProcessor.drawUI();
-			ImGui::Unindent();
-		}
+		//	ImGui::Text("Screen Texture");
+		//	float ratio = guiWidth / postProcessor.getWidthHeight().x;
+		//	ImVec2 imageDrawSize = ImVec2(postProcessor.getWidthHeight().x * ratio, postProcessor.getWidthHeight().y * ratio);
+		//	ImGui::Image((ImTextureID)postProcessor.getColourTextures()[0], imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
+		//	
+		//	ImGui::Text("Screen Texture 1");
+		//	ImGui::Image((ImTextureID)postProcessor.getColourTextures()[1], imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
+
+		//	// TODO Reording
+		//	// Look at for Drag and Drop
+		//	// https://github.com/ocornut/imgui/issues/1931
+		//	if (ImGui::Button("[TEMP] Swap Effect Order")) {
+		//		EffectsList tempList = postProcessor.effects;
+		//		tempList[0] = postProcessor.effects[1];
+		//		tempList[1] = postProcessor.effects[0];
+		//		postProcessor.effects = tempList;
+		//		postProcessor.updateTextureIndex();
+		//	}
+
+		//	postProcessor.drawUI();
+		//	ImGui::Unindent();
+		//}
 
 
 		if (ImGui::CollapsingHeader("Scene Settings"))

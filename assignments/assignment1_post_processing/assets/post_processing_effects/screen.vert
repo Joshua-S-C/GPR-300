@@ -7,6 +7,8 @@ out Surface{
 	vec2 UV;
 }vs_out;
 
+out float FragDepth;
+
 // From Eric. For dummy vao
 vec4 verts[3] = {
     vec4(-1.0, -1.0, 0.0 ,0.0 ),	// Bottom left
@@ -17,6 +19,7 @@ vec4 verts[3] = {
 
 void main()
 {
+	FragDepth = gl_Position.z;
     vs_out.UV = verts[gl_VertexID].zw;
     gl_Position = vec4(verts[gl_VertexID].xy, 0, 1);
 }  
