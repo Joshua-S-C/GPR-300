@@ -5,6 +5,9 @@
 namespace jsc {
 	struct PostProcessEffect
 	{
+		ew::Shader shader;
+		std::string name;
+
 		PostProcessEffect(ew::Shader shader, int screenTexIndex) :
 			shader(shader)
 		{
@@ -14,8 +17,6 @@ namespace jsc {
 
 		~PostProcessEffect()
 		{}
-
-		ew::Shader shader;
 		
 		// TODO this maybe idk
 		//std::string relativePath; 
@@ -39,17 +40,20 @@ namespace jsc {
 
 	struct TintShader : public PostProcessEffect
 	{
+		bool active = true;
 		float tintStrength = 0.5;
 		glm::vec3 tintColour = glm::vec3(1.0, 0.0, 1.0);
 
 		TintShader(ew::Shader shader, int screenTexIndex) :
 			PostProcessEffect(shader, screenTexIndex)
 		{
+			name = "Tint Shader";
 			updateShader();
 		}
 
 		void drawUI() {
 			ImGui::Text("Tint Shader");
+			ImGui::Checkbox("Active (Tint)", &active);
 			ImGui::DragFloat("Strength", &tintStrength, 0.001, 0, 1);
 			ImGui::ColorPicker3("Tint Colour", &tintColour.x);
 		}
@@ -58,6 +62,7 @@ namespace jsc {
 			shader.use();
 			shader.setFloat("_TintStrength", tintStrength);
 			shader.setVec3("_TintColour", tintColour);
+			shader.setBool("_Active", active);
 		}
 	};
 
@@ -68,17 +73,71 @@ namespace jsc {
 		NegativeShader(ew::Shader shader, int screenTexIndex) :
 			PostProcessEffect(shader, screenTexIndex)
 		{
+			name = "Negative Shader";
 			updateShader();
 		}
 
 		void drawUI() {
 			ImGui::Text("Negative Shader");
-			ImGui::Checkbox("Active", &active);
+			ImGui::Checkbox("Active (Negative)", &active);
 		}
 
 		void updateShader() {
 			shader.use();
 			shader.setBool("_Active", active);
+		}
+	};
+
+	struct BoxBlurShader : public PostProcessEffect
+	{
+		bool active = true;
+		int kernelSize = 3;
+
+		BoxBlurShader(ew::Shader shader, int screenTexIndex) :
+			PostProcessEffect(shader, screenTexIndex)
+		{
+			name = "Box Blur Shader";
+			updateShader();
+		}
+
+		void drawUI() {
+			ImGui::Text("Blur Shader");
+			ImGui::Checkbox("Active (Box Blur)", &active);
+			ImGui::SliderInt("Kernel Size", &kernelSize, 0, 100);	// 
+		}
+
+		void updateShader() {
+			shader.use();
+			shader.setBool("_Active", active);
+			shader.setInt("_KernelSize", kernelSize);
+		}
+	};
+
+	struct GaussianBlurShader : public PostProcessEffect
+	{
+		bool active = true;
+		int kernelSize = 3;
+		float sigma = 5;
+
+		GaussianBlurShader(ew::Shader shader, int screenTexIndex) :
+			PostProcessEffect(shader, screenTexIndex)
+		{
+			name = "Gaussian Blur Shader";
+			updateShader();
+		}
+
+		void drawUI() {
+			ImGui::Text("Gaussian Blur Shader");
+			ImGui::Checkbox("Active (Gaussian Blur)", &active);
+			ImGui::DragInt("Kernel Size", &kernelSize);
+			ImGui::DragFloat("Sigma", &sigma);
+		}
+
+		void updateShader() {
+			shader.use();
+			shader.setBool("_Active", active);
+			shader.setInt("_KernelSize", kernelSize);
+			shader.setInt("_Sigma", sigma);
 		}
 	};
 }

@@ -38,11 +38,35 @@ namespace jsc {
 
 		//void createColourAttachment(unsigned int width, unsigned int height);
 
-		void drawUI() {
+		void drawUIWindow() {
+			ImGui::SetNextWindowPos({ (float)width - 500,0 });
+			ImGui::SetNextWindowSize({ 500, 300 });
+			ImGui::Begin("Post Processing Editor", 0);
+
+			ImGui::Columns(2, "locations");
+			ImGui::SetColumnWidth(0, 250.0f);
+			ImGui::SetColumnWidth(1, 250.0f);
+			drawAllImages();
+
+			ImGui::NextColumn();
+
+			// TODO Reording
+			// Look at for Drag and Drop
+			// https://github.com/ocornut/imgui/issues/1931
+			if (ImGui::Button("Swap Effect Order")) {
+				EffectsList tempList = effects;
+				tempList[0] = effects[1];
+				tempList[1] = effects[0];
+				effects = tempList;
+				updateTextureIndex();
+			}
+
 			for each (PostProcessEffect* effect in effects)
 			{
 				effect->drawUI();
 			}
+
+			ImGui::End();
 		}
 
 		GLuint* getColourTextures() {
@@ -55,27 +79,18 @@ namespace jsc {
 
 		// TODO Fix the aspect ratio on this, cuz for some reason calcing the aspect ratio (as done in main) doesn't work :3
 		// For when there's more than 2 effects
-		void drawDebuggingUI() 
+		void drawAllImages() 
 		{
-			if (ImGui::CollapsingHeader("Images being drawn again ig")) 
+			float ratio = 250.0f / width;
+			ImVec2 imageDrawSize = ImVec2(width * ratio, height * ratio);
+
+			int i = 0;
+
+			for each (GLuint image in debug_texClr)
 			{
-				ImGui::Text("[Test]");
-
-				float ratio = 300 / width;
-				//ImVec2 imageDrawSize = ImVec2(width * ratio, height * ratio);
-				ImVec2 imageDrawSize = ImVec2(width / 3, height / 3);
-
-				int i = 0;
-
-				for each (GLuint image in debug_texClr)
-				{
-					ImGui::Text("Texture");
-					ImGui::Image((ImTextureID)image, imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
+				ImGui::Image((ImTextureID)image, imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
 				
-					i++;
-				}
-
-				ImGui::Text("End \"Test\" UI");
+				i++;
 			}
 		}
 
@@ -92,7 +107,8 @@ namespace jsc {
 
 		GLuint texClr[2];	// Colour attachments
 
-		std::vector<GLuint> debug_texClr;	// Testing Colour attachments. For when theres more than 2 effects
+		std::vector<GLuint> debug_texClr;	
+		// Testing Colour attachments. For when theres more than 2 effects
 	};
 
 	PostProcessor::PostProcessor(EffectsList effects, unsigned int width, unsigned int height) :
@@ -138,6 +154,8 @@ namespace jsc {
 
 		// Dummy VAO
 		glCreateVertexArrays(1, &VAO);
+
+		updateTextureIndex();
 	}
 	
 	PostProcessor::~PostProcessor()

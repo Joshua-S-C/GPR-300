@@ -9,14 +9,21 @@ in Surface{
 
 uniform sampler2D _ScreenTexture;
 
+uniform bool _Active;
 uniform vec3 _TintColour;
 uniform float _TintStrength;
 
 void main()
 {
-    vec3 col = texture(_ScreenTexture, fs_in.UV).rgb;
-    col = col * (1 - _TintStrength);
-    vec3 tint = _TintColour * _TintStrength;
+    if (!_Active) {
+        FragColor = vec4(texture(_ScreenTexture, fs_in.UV).rgb, 1.0);
+        return;
+    } else {
+        vec3 col = texture(_ScreenTexture, fs_in.UV).rgb;
+        col = col * (1 - _TintStrength);
+        vec3 tint = _TintColour * _TintStrength;
 
-    FragColor = vec4(col + tint , 1.0);
+        FragColor = vec4(col + tint , 1.0);
+    }
+
 } 
