@@ -95,10 +95,12 @@ int main() {
 	// Post Processing Setup
 	jsc::PostProcessEffect* tintShader = new jsc::TintShader(ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"), 1);
 	jsc::PostProcessEffect* negativeShader = new jsc::NegativeShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/negative.frag"), 2);
+	jsc::PostProcessEffect* blurShader = new jsc::BoxBlurShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/boxBlur.frag"), 2);
 
 	EffectsList effects;
 	effects.push_back(tintShader);
 	effects.push_back(negativeShader);
+	effects.push_back(blurShader);
 
 	jsc::PostProcessor postProcessor(effects, screenWidth, screenHeight);
 
@@ -115,7 +117,10 @@ int main() {
 		camera.aspectRatio = (float)screenWidth / screenHeight;
 		cameraController.move(window, &camera, deltaTime);
 
-		postProcessor.preRender();
+		//postProcessor.preRender();
+
+		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 // Uniforms & Draw ------------------------------------------------------*/
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));	
@@ -143,8 +148,8 @@ int main() {
 
 // Post Processing ------------------------------------------------------*/
 
-		postProcessor.render();
-		postProcessor.draw();
+		//postProcessor.render();
+		//postProcessor.draw();
 
 // More -----------------------------------------------------------------*/
 		//drawUI();
@@ -155,36 +160,24 @@ int main() {
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui::NewFrame();
 
+		postProcessor.drawUIWindow();
+
 		ImGui::SetNextWindowPos({ 0,0 });
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Settings", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
-		if (ImGui::CollapsingHeader("Post Processing"))
+		if (ImGui::CollapsingHeader("View Ping Pong Textures"))
 		{
 			ImGui::Indent();
-			// Same thing as below but for more than 2 effects (ignore that its not scaled properly)
-			postProcessor.drawDebuggingUI();
 
-			ImGui::Text("Screen Texture");
+			ImGui::Text("Ping Pong 1");
 			float ratio = guiWidth / postProcessor.getWidthHeight().x;
 			ImVec2 imageDrawSize = ImVec2(postProcessor.getWidthHeight().x * ratio, postProcessor.getWidthHeight().y * ratio);
 			ImGui::Image((ImTextureID)postProcessor.getColourTextures()[0], imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
 			
-			ImGui::Text("Screen Texture 1");
+			ImGui::Text("Ping Pong 2");
 			ImGui::Image((ImTextureID)postProcessor.getColourTextures()[1], imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
 
-			// TODO Reording
-			// Look at for Drag and Drop
-			// https://github.com/ocornut/imgui/issues/1931
-			if (ImGui::Button("Swap Effect Order")) {
-				EffectsList tempList = postProcessor.effects;
-				tempList[0] = postProcessor.effects[1];
-				tempList[1] = postProcessor.effects[0];
-				postProcessor.effects = tempList;
-				postProcessor.updateTextureIndex();
-			}
-
-			postProcessor.drawUI();
 			ImGui::Unindent();
 		}
 

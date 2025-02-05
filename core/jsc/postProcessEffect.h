@@ -103,7 +103,11 @@ namespace jsc {
 		void drawUI() {
 			ImGui::Text("Blur Shader");
 			ImGui::Checkbox("Active (Box Blur)", &active);
-			ImGui::SliderInt("Kernel Size", &kernelSize, 0, 100);	// 
+			
+			if (ImGui::SliderInt("Kernel Size", &kernelSize, 0, 30)) {
+				if (kernelSize % 2 == 0)
+					kernelSize--;
+			}
 		}
 
 		void updateShader() {

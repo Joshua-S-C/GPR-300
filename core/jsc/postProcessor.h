@@ -19,11 +19,14 @@ namespace jsc {
 		/// </summary>
 		void preRender();
 
-		// TOODO Maybe still separate this into render and draw
 		/// <summary>
-		/// Call this after objects are drawn. Renders and draws
+		/// Call this after objects are drawn. Draws to the texture and prepares to draw
 		/// </summary>
 		void render(GLuint frameBuffer = 0);
+
+		/// <summary>
+		/// Renders the full screen tri
+		/// </summary>
 		void draw(GLuint frameBuffer = 0);
 
 		void updateTextureIndex(int screenTexIndexStart = 1) {
@@ -36,8 +39,6 @@ namespace jsc {
 			}
 		}
 
-		//void createColourAttachment(unsigned int width, unsigned int height);
-
 		void drawUIWindow() {
 			ImGui::SetNextWindowPos({ (float)width - 500,0 });
 			ImGui::SetNextWindowSize({ 500, 300 });
@@ -46,10 +47,12 @@ namespace jsc {
 			ImGui::Columns(2, "locations");
 			ImGui::SetColumnWidth(0, 250.0f);
 			ImGui::SetColumnWidth(1, 250.0f);
+
 			drawAllImages();
 
 			ImGui::NextColumn();
 
+			// For some reason, pressing this makes it so that more than 2 render effects work. Doesn't work when I put this in the constructor tho so I don't know what's happening
 			// TODO Reording
 			// Look at for Drag and Drop
 			// https://github.com/ocornut/imgui/issues/1931
@@ -218,7 +221,7 @@ namespace jsc {
 		// class starts in 7 hours 
 
 		// Ping Ponging
-		bool pingPong = true;
+		bool pingPong = false;
 		for (PostProcessEffect* effect : effects) {
 			glClearColor(1.0f, 0.0f, 0.0f, 1.0f); // Red ig idk
 
