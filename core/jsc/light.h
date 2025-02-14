@@ -14,11 +14,13 @@ namespace jsc {
 		ew::Transform transform; // World Space
 		glm::vec3 clr; // RBG
 
-		Light::Light(glm::vec3 clr) {
+		Light() {}
+
+		Light(glm::vec3 clr) {
 			this->clr = clr;
 		}
 
-		void Light::drawUI() {
+		virtual void drawUI() {
 			if (ImGui::CollapsingHeader("Light")) {
 				ImGui::DragFloat3("Position", &transform.position.x, .05f, -10.0f, 10.0f);
 				ImGui::ColorEdit3("Colour", &clr.x);
@@ -26,16 +28,19 @@ namespace jsc {
 		}
 	};
 
-	struct DirectionalLight {
+	struct DirectionalLight : Light{
 		glm::vec3 dir;
 
-		DirectionalLight::DirectionalLight(glm::vec3 dir) {
+		DirectionalLight(glm::vec3 dir, glm::vec3 clr) {
 			this->dir = dir;
+			this->clr = clr;
 		}
 
-		void DirectionalLight::drawUI() {
-			if (ImGui::CollapsingHeader("Light")) {
+		void drawUI() {
+			if (ImGui::CollapsingHeader("Directional Light")) {
 				ImGui::DragFloat3("Direction", &dir.x, .05f, -1.0f, 1.0f);
+				ImGui::DragFloat3("Position", &transform.position.x, .05f, -10.0f, 10.0f);
+				ImGui::ColorEdit3("Colour", &clr.x);
 			}
 		}
 	};
@@ -48,14 +53,14 @@ namespace jsc {
 
 		float shininess = 32;
 
-		Material::Material(float ambient, float diffuse, float specular, float _shininess) {
+		Material(float ambient, float diffuse, float specular, float _shininess) {
 			ambientK = ambient;
 			diffuseK = diffuse;
 			specularK = specular;
 			shininess = _shininess;
 		};
 
-		void Material::drawUI() {
+		void drawUI() {
 			if (ImGui::CollapsingHeader("Material")) {
 				ImGui::SliderFloat("AmbientK", &ambientK, 0.0f, 1.0f);
 				ImGui::SliderFloat("DiffuseK", &diffuseK, 0.0f, 1.0f);

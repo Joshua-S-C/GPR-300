@@ -42,7 +42,7 @@ ew::Transform planeTransform;
 
 jsc::Material material(1, .5, .5, 128);
 jsc::Light light(glm::vec3(1.0));
-jsc::DirectionalLight dirLight(glm::vec3(0.0, 1.0, 0.0));
+jsc::DirectionalLight dirLight(glm::vec3(0.0, 1.0, 0.0), light.clr);
 
 struct AppSettings {
 	bool useNormalMap = true;
@@ -64,7 +64,7 @@ struct AppSettings {
 
 
 int main() {
-	GLFWwindow* window = initWindow("Assignment 1 - Post Processing", screenWidth, screenHeight);
+	GLFWwindow* window = initWindow("Assignment 2 - Shadow Mapping", screenWidth, screenHeight);
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
@@ -79,6 +79,7 @@ int main() {
 	camera.fov = 60.0f;
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
+	ew::Shader depthShader = ew::Shader("assets/shadows/shadow.vert", "assets/shadows/shadow.frag");
 
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Transform monkeyTransform;
@@ -92,6 +93,9 @@ int main() {
 	shader.setInt("_MainTex", 0);
 	shader.setInt("_NormalMap", 1);
 	
+	depthShader.use();
+	depthShader.setInt("_DepthMap", 2);
+
 	// Post Processing Setup
 	jsc::PostProcessEffect* tintShader = new jsc::TintShader(ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"), 1);
 	jsc::PostProcessEffect* negativeShader = new jsc::NegativeShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/negative.frag"), 2);
@@ -103,6 +107,32 @@ int main() {
 	effects.push_back(blurShader);
 
 	jsc::PostProcessor postProcessor(effects, screenWidth, screenHeight);
+
+	// Depth buffer creation
+	GLuint depthFBO;
+	glGenFramebuffers(1, &depthFBO);
+	const GLuint shadowWidth = 1024, shadowHeight = 1024;
+
+	// Depth texture creation
+	GLuint depthMap;
+	glGenTextures(1, &depthMap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+		shadowWidth, shadowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	// Attach them
+	glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	GLuint depthVAO;
+	glCreateVertexArrays(1, &depthVAO);
+
 
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
@@ -119,8 +149,29 @@ int main() {
 
 		//postProcessor.preRender();
 
-		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
+		glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+// Render Depth to Scene ------------------------------------------------*/
+
+		glm::mat4 lightProj, lightView, lightSpaceMatrix;
+		float nearPlane = 1.0f, farPlane = 7.5f;
+
+		lightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, nearPlane, farPlane);
+		// TODO Change this to use dir lights direction
+		lightView = glm::lookAt(
+			glm::vec3(-2.0f, 4.0f, -1.0f),
+			glm::vec3(0.0f, 0.0f, 0.0f),
+			glm::vec3(0.0f, 1.0f, 0.0f)); 
+
+		lightSpaceMatrix = lightProj * lightView;
+
+		depthShader.use();
+		depthShader.setMat4("_LightSpaceMatrix", lightSpaceMatrix);
+		glViewport(0, 0, shadowWidth, shadowHeight);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
+		glClear(GL_DEPTH_BUFFER_BIT);
 
 // Uniforms & Draw ------------------------------------------------------*/
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));	
@@ -150,6 +201,15 @@ int main() {
 
 		//postProcessor.render();
 		//postProcessor.draw();
+
+		glViewport(0, 0, screenWidth, screenHeight);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		depthShader.use();
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		glBindVertexArray(depthVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 // More -----------------------------------------------------------------*/
 		//drawUI();
@@ -217,6 +277,8 @@ int main() {
 
 		glfwSwapBuffers(window);
 	}
+	
+	glDeleteVertexArrays(1, &depthVAO);
 
 	printf("Sayonara!");
 }
