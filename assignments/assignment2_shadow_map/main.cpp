@@ -79,7 +79,7 @@ int main() {
 	camera.fov = 60.0f;
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
-	ew::Shader depthShader = ew::Shader("assets/shadows/shadow.vert", "assets/shadows/shadow.frag");
+	ew::Shader depthShader = ew::Shader("assets/shadows/depth.vert", "assets/shadows/depth.frag");
 
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Transform monkeyTransform;
@@ -96,21 +96,25 @@ int main() {
 	depthShader.use();
 	depthShader.setInt("_DepthMap", 2);
 
-	// Post Processing Setup
-	jsc::PostProcessEffect* tintShader = new jsc::TintShader(ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"), 1);
-	jsc::PostProcessEffect* negativeShader = new jsc::NegativeShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/negative.frag"), 2);
-	jsc::PostProcessEffect* blurShader = new jsc::BoxBlurShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/boxBlur.frag"), 2);
+	// Post Processing
+	if (false)
+	{
+		jsc::PostProcessEffect* tintShader = new jsc::TintShader(ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"), 1);
+		jsc::PostProcessEffect* negativeShader = new jsc::NegativeShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/negative.frag"), 2);
+		jsc::PostProcessEffect* blurShader = new jsc::BoxBlurShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/boxBlur.frag"), 2);
 
-	EffectsList effects;
-	effects.push_back(tintShader);
-	effects.push_back(negativeShader);
-	effects.push_back(blurShader);
+		EffectsList effects;
+		effects.push_back(tintShader);
+		effects.push_back(negativeShader);
+		effects.push_back(blurShader);
 
-	jsc::PostProcessor postProcessor(effects, screenWidth, screenHeight);
+		jsc::PostProcessor postProcessor(effects, screenWidth, screenHeight);
+	}
 
 	// Depth buffer creation
 	GLuint depthFBO;
 	glGenFramebuffers(1, &depthFBO);
+
 	const GLuint shadowWidth = 1024, shadowHeight = 1024;
 
 	// Depth texture creation
@@ -118,6 +122,7 @@ int main() {
 	glGenTextures(1, &depthMap);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
 		shadowWidth, shadowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -127,7 +132,7 @@ int main() {
 	glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
 	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
+	glDrawBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	GLuint depthVAO;
@@ -151,8 +156,10 @@ int main() {
 
 		glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		
+		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 
-// Render Depth to Scene ------------------------------------------------*/
+// Render Scene to Depth ------------------------------------------------*/
 
 		glm::mat4 lightProj, lightView, lightSpaceMatrix;
 		float nearPlane = 1.0f, farPlane = 7.5f;
@@ -168,13 +175,15 @@ int main() {
 
 		depthShader.use();
 		depthShader.setMat4("_LightSpaceMatrix", lightSpaceMatrix);
-		glViewport(0, 0, shadowWidth, shadowHeight);
 
+		glViewport(0, 0, shadowWidth, shadowHeight);
 		glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
+
+		// Back to default
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 // Uniforms & Draw ------------------------------------------------------*/
-		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));	
 
 		shader.use();
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
@@ -220,12 +229,13 @@ int main() {
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui::NewFrame();
 
-		postProcessor.drawUIWindow();
+		//postProcessor.drawUIWindow();
 
 		ImGui::SetNextWindowPos({ 0,0 });
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Settings", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
+		/*
 		if (ImGui::CollapsingHeader("View Ping Pong Textures"))
 		{
 			ImGui::Indent();
@@ -240,7 +250,7 @@ int main() {
 
 			ImGui::Unindent();
 		}
-
+		*/
 
 		if (ImGui::CollapsingHeader("Scene Settings"))
 		{
