@@ -238,8 +238,9 @@ int main() {
 		depthDebugShader.setInt("_DepthMap", 0);
 		depthDebugShader.setFloat("_NearPlane", nearPlane);
 		depthDebugShader.setFloat("_FarPlane", farPlane);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, depthMap);
+		
+		//glActiveTexture(GL_TEXTURE0);
+		//glBindTexture(GL_TEXTURE_2D, depthMap);
 
 		glBindVertexArray(depthVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -263,7 +264,7 @@ int main() {
 		float ratio = guiWidth / shadowWidth;
 		ImVec2 imageDrawSize = ImVec2(shadowWidth * ratio, shadowHeight * ratio);
 
-		ImGui::Image((ImTextureID)depthMap, imageDrawSize, ImVec2(0,1), ImVec2(0,1));
+		ImGui::Image((ImTextureID)depthMap, imageDrawSize, ImVec2(0,1), ImVec2(1,0));
 
 		/*
 		if (ImGui::CollapsingHeader("View Ping Pong Textures"))
