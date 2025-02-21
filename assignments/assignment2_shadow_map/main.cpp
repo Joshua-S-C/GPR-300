@@ -91,11 +91,11 @@ int main() {
 	planeTransform.position = glm::vec3(0, -1.0, 0);
 
 	shader.use();
-	shader.setInt("_MainTex", 0);
-	shader.setInt("_NormalMap", 1);
+	//shader.setInt("_MainTex", 1);
+	//shader.setInt("_NormalMap", 2);
 	
 	depthShader.use();
-	depthShader.setInt("_DepthMap", 2);
+	depthShader.setInt("_DepthMap", 0);
 
 	// Post Processing
 	if (false)
@@ -115,12 +115,16 @@ int main() {
 	// Depth buffer creation
 	GLuint depthFBO;
 	glGenFramebuffers(1, &depthFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
 
 	const GLuint shadowWidth = 1024, shadowHeight = 1024;
 
 	// Depth texture creation
 	GLuint depthMap;
 	glGenTextures(1, &depthMap);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
 		shadowWidth, shadowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
@@ -130,16 +134,17 @@ int main() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 	// Attach them
-	glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
 	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
 
-	glBindTexture(GL_TEXTURE_2D, 0);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		printf("ERROR::FRAMEBUFFER:: Framebuffer is not complete!");
+
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	GLuint depthVAO;
 	glCreateVertexArrays(1, &depthVAO);
-
 
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
@@ -175,52 +180,50 @@ int main() {
 
 		lightSpaceMatrix = lightProj * lightView;
 
-		depthShader.use();
-		depthShader.setMat4("_LightSpaceMatrix", lightSpaceMatrix);
-
 		glViewport(0, 0, shadowWidth, shadowHeight);
 		glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
-		glBindTextureUnit(2, depthMap);
 
-		shader.use();
-		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		//glActiveTexture(GL_TEXTURE0);
+		//glBindTexture(GL_TEXTURE_2D, texture);
 
-		shader.setMat4("_Model", monkeyTransform.modelMatrix());
+		//glActiveTexture(GL_TEXTURE1);
+		//glBindTexture(GL_TEXTURE_2D, normalMap);
+
+		depthShader.use();
+		depthShader.setMat4("_LightSpaceMatrix", lightSpaceMatrix);
+
+		//shader.use();
+		//shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+
+		depthShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw();
 
-		shader.setMat4("_Model", planeTransform.modelMatrix());
+		depthShader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
 
+// Uniforms & Draw ------------------------------------------------------*/
 		// Back to default
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-// Uniforms & Draw ------------------------------------------------------*/
 		glViewport(0, 0, screenWidth, screenHeight);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		//glBindTexture(GL_TEXTURE_2D, depthMap);
 
-		shader.use();
-		shader.setMat4("_Model", monkeyTransform.modelMatrix());
-		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		//shader.use();
+		//shader.setMat4("_Model", monkeyTransform.modelMatrix());
+		//shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture);
+		//glActiveTexture(GL_TEXTURE0);
+		//glBindTexture(GL_TEXTURE_2D, texture);
 
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, normalMap);
+		//glActiveTexture(GL_TEXTURE1);
+		//glBindTexture(GL_TEXTURE_2D, normalMap);
 
-		shader.setMaterial("_Material", material);
-		shader.setLight("_Light", light);
-		shader.setVec3("_DirectionalLight.dir", dirLight.dir);
-		shader.setBool("_UseNormalMap", settings.useNormalMap);
-		shader.setBool("_UseDirectionalLight", settings.useDirectionalLight);
+		//monkeyModel.draw();
 
-		monkeyModel.draw();
-
-		shader.setMat4("_Model", planeTransform.modelMatrix());
-		planeMesh.draw();
+		//shader.setMat4("_Model", planeTransform.modelMatrix());
+		//planeMesh.draw();
 
 // Post Processing ------------------------------------------------------*/
 
@@ -231,8 +234,8 @@ int main() {
 		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Render Depth to tri
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		depthDebugShader.use();
+		depthDebugShader.setInt("_DepthMap", 0);
 		depthDebugShader.setFloat("_NearPlane", nearPlane);
 		depthDebugShader.setFloat("_FarPlane", farPlane);
 		glActiveTexture(GL_TEXTURE0);
@@ -257,8 +260,10 @@ int main() {
 		ImGui::Begin("Settings", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
 		ImGui::Text("Shadow Map");
-		ImVec2 windowSize = ImGui::GetWindowSize();
-		ImGui::Image((ImTextureID)depthMap, windowSize, ImVec2(0,1), ImVec2(0,1));
+		float ratio = guiWidth / shadowWidth;
+		ImVec2 imageDrawSize = ImVec2(shadowWidth * ratio, shadowHeight * ratio);
+
+		ImGui::Image((ImTextureID)depthMap, imageDrawSize, ImVec2(0,1), ImVec2(0,1));
 
 		/*
 		if (ImGui::CollapsingHeader("View Ping Pong Textures"))
