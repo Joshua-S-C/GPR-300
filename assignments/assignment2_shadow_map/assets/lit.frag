@@ -37,6 +37,8 @@ uniform Light _Light;
 uniform DirectionalLight _DirectionalLight;
 
 uniform vec3 _EyePos;
+
+uniform bool _UseAmbientClr = false;
 uniform vec3 _AmbientColor = vec3(0.3,0.4,0.46);
 
 uniform bool _UseNormalMap;
@@ -67,24 +69,39 @@ vec3 calcLightDir() {
 		return normalize(_Light.pos - fs_in.WorldPos);
 }
 
+// Not In Shadow [0 - 1] In Shadow
 float calcShadow(vec4 FragPosLightSpace, float shadowBias) {
+	//return 0;
+
 	// Frag Light Space pos in [-1,1]
     vec3 projCoords = FragPosLightSpace.xyz / FragPosLightSpace.w;
 
 	// Remap to [0,1]
 	projCoords = projCoords * 0.5 + 0.5; 
 
-	// Check this
-	if(projCoords.z > 1.0)
-	{
-        float shadow = 0.0;
-		return shadow;
-	}
-
 	float closestDepth = texture(_ShadowMap, projCoords.xy).r;
 	float currentDepth = projCoords.z;
 
-	float shadow = currentDepth - shadowBias > closestDepth  ? 1.0 : 0.0;
+	//float shadow = currentDepth - shadowBias > closestDepth  ? 1.0 : 0.0;
+
+	// PCF
+	float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(_ShadowMap, 0);
+
+    for (int x = -1; x <= 1; x++)
+    {
+        for(int y = -1; y <= 1; y++)
+        {
+            float pcfDepth = texture(_ShadowMap, projCoords.xy + vec2(x, y) * texelSize).r; 
+            shadow += currentDepth - shadowBias > pcfDepth  ? 1.0 : 0.0;        
+        }    
+    }
+
+    shadow /= 9.0;
+
+	// Check this
+	if(projCoords.z > 1.0)
+        shadow = 0.0;
 	
 	return shadow;
 }
@@ -130,7 +147,7 @@ void main() {
 	vec3 h = normalize(lightDir + toEye);
 
 	// Phong
-	vec3 ambientClr = _AmbientColor * _Material.aK;
+	vec3 ambientClr = _Material.aK * (_UseAmbientClr ? _AmbientColor : _Light.clr);
 	float diffuse = _Material.dK * max(dot(normal,lightDir),0.0);
 	float specular = _Material.sK * pow(max(dot(normal,h),0.0), _Material.shininess);
 
@@ -138,7 +155,17 @@ void main() {
 	float shadow = calcShadow(fs_in.FragPosLightSpace, calcShadowBias(normal, lightDir));
 
 	// Combine Lighting
-	vec3 lightColor = (diffuse +  specular) * _Light.clr + (ambientClr + (1.0 - shadow));
+	//vec3 lightColor = 
+	//	((diffuse + specular) * _Light.clr) +
+	//	(ambientClr + (-shadow));
+
+	//ambientClr += -shadow;
+	//diffuse += -shadow;
+	specular += -shadow;
+
+	vec3 lightColor = (diffuse +  specular) * _Light.clr + ambientClr;
+	//lightColor = lightColor + (-shadow);
+
 	vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
 
 	FragColor = vec4(objectColor * lightColor,1.0);

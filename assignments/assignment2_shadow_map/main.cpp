@@ -37,6 +37,7 @@ float guiWidth = 300;
 
 ew::CameraController cameraController;
 ew::Camera camera;
+ew::Camera shadowCamera;
 
 ew::Transform planeTransform;
 
@@ -47,6 +48,10 @@ jsc::DirectionalLight dirLight(glm::vec3(0.0, 1.0, 0.0), light.clr);
 struct AppSettings {
 	bool useNormalMap = true;
 	bool useDirectionalLight = true;
+	bool useCustomAmbientClr = true;
+
+	glm::vec4 clearClr = glm::vec4(0.6f, 0.8f, 0.92f, 1.0f);
+
 
 	int renderTypeIndex = 0;
 	enum RenderTypes {
@@ -77,6 +82,11 @@ int main() {
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f);
 	camera.aspectRatio = (float)screenWidth / screenHeight;
 	camera.fov = 60.0f;
+
+	shadowCamera.position = glm::vec3(-2.0f, 4.0f, -1.0f);
+	shadowCamera.target = glm::vec3(0.0f, 0.0f, 0.0f);
+	shadowCamera.aspectRatio = (float)screenWidth / screenHeight;
+	shadowCamera.fov = 60.0f;
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
 	ew::Shader depthShader = ew::Shader("assets/shadows/depth.vert", "assets/shadows/depth.frag");
@@ -119,7 +129,7 @@ int main() {
 	glGenFramebuffers(1, &depthFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
 
-	const GLuint shadowWidth = 1024, shadowHeight = 1024;
+	const GLuint shadowWidth = 2048, shadowHeight = 2048;
 
 	// Depth texture creation
 	GLuint depthMap;
@@ -164,10 +174,12 @@ int main() {
 		prevFrameTime = time;
 
 		camera.aspectRatio = (float)screenWidth / screenHeight;
+		shadowCamera.aspectRatio = (float)screenWidth / screenHeight;
+
 		cameraController.move(window, &camera, deltaTime);
 
 
-		glClearColor(0.0f, 0.0f, 0.5f, 1.0f);
+		glClearColor(settings.clearClr.x, settings.clearClr.y, settings.clearClr.z, settings.clearClr.w);
 		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
@@ -179,9 +191,14 @@ int main() {
 
 		lightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, nearPlane, farPlane);
 		// TODO Change this to use dir lights direction
+		//lightView = glm::lookAt(
+		//	glm::vec3(-2.0f, 4.0f, -1.0f),
+		//	glm::vec3(0.0f, 0.0f, 0.0f),
+		//	glm::vec3(0.0f, 1.0f, 0.0f)); 
+		
 		lightView = glm::lookAt(
-			glm::vec3(-2.0f, 4.0f, -1.0f),
-			glm::vec3(0.0f, 0.0f, 0.0f),
+			glm::vec3(shadowCamera.position.x, shadowCamera.position.y, shadowCamera.position.z),
+			glm::vec3(shadowCamera.target.x, shadowCamera.target.y, shadowCamera.target.z),
 			glm::vec3(0.0f, 1.0f, 0.0f)); 
 
 		lightSpaceMatrix = lightProj * lightView;
@@ -219,6 +236,7 @@ int main() {
 		shader.setVec3("_DirectionalLight.dir", dirLight.dir);
 		shader.setBool("_UseNormalMap", settings.useNormalMap);
 		shader.setBool("_UseDirectionalLight", settings.useDirectionalLight);
+		shader.setBool("_UseAmbientClr", settings.useCustomAmbientClr);
 
 		// Textures
 		glActiveTexture(GL_TEXTURE1);
@@ -301,6 +319,12 @@ int main() {
 				resetCamera(&camera, &cameraController);
 
 			ImGui::Checkbox("Use Normal Map", &settings.useNormalMap);
+
+			ImGui::Checkbox("Use Custom Ambient Clr", &settings.useCustomAmbientClr);
+
+			if (settings.useCustomAmbientClr) {
+				ImGui::Text("Too Lazy to update Material struct rn");
+			}
 
 			ImGui::Combo("Render Type", &settings.renderTypeIndex, settings.renderTypeNames, IM_ARRAYSIZE(settings.renderTypeNames));
 

@@ -42,7 +42,7 @@ ew::Transform planeTransform;
 
 jsc::Material material(1, .5, .5, 128);
 jsc::Light light(glm::vec3(1.0));
-jsc::DirectionalLight dirLight(glm::vec3(0.0, 1.0, 0.0));
+jsc::DirectionalLight dirLight(glm::vec3(0.0, 1.0, 0.0), light.clr);
 
 struct AppSettings {
 	bool useNormalMap = true;
