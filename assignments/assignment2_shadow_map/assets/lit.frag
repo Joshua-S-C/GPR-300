@@ -74,6 +74,13 @@ float calcShadow(vec4 FragPosLightSpace, float shadowBias) {
 	// Remap to [0,1]
 	projCoords = projCoords * 0.5 + 0.5; 
 
+	// Check this
+	if(projCoords.z > 1.0)
+	{
+        float shadow = 0.0;
+		return shadow;
+	}
+
 	float closestDepth = texture(_ShadowMap, projCoords.xy).r;
 	float currentDepth = projCoords.z;
 
@@ -96,7 +103,7 @@ void main() {
 	else
 		normal = normalize(fs_in.WorldNormal);
 
-	switch (_RenderType){
+	switch (_RenderType) {
 		// Use Texture
 		default:
 			break;

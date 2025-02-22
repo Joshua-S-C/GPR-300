@@ -135,13 +135,18 @@ int main() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
 	// Attach them
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		printf("ERROR::FRAMEBUFFER:: Framebuffer is not complete!");
+		printf("[Error] Framebuffer is not complete\n");
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -185,6 +190,8 @@ int main() {
 		glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
+		glCullFace(GL_FRONT);
+
 		depthShader.use();
 		depthShader.setMat4("_LightSpaceMatrix", lightSpaceMatrix);
 
@@ -194,6 +201,7 @@ int main() {
 		depthShader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
 		
+		glCullFace(GL_BACK);
 
 // Lighting Pass --------------------------------------------------------*/
 
