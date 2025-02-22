@@ -36,7 +36,7 @@ namespace jsc {
 			{
 				effect->updateTextureIndex(screenTexIndexStart + i);
 				i++;
-			}
+				}
 		}
 
 		void drawUIWindow() {
@@ -67,6 +67,22 @@ namespace jsc {
 			for each (PostProcessEffect* effect in effects)
 			{
 				effect->drawUI();
+			}
+
+			ImGui::End();
+		}
+
+
+		int _texIndex = 0;
+		void drawDebugUIWindow() {
+			ImGui::SetNextWindowPos({ 300,0 });
+			ImGui::SetNextWindowSize({ 200, 300 });
+			ImGui::Begin("Post Processing Debug", 0, ImGuiWindowFlags_NoResize);
+
+			ImGui::SliderInt("Tex Index", &_texIndex, -3, 5);
+
+			if (ImGui::Button("Update Texture Index")) {
+				updateTextureIndex(_texIndex);
 			}
 
 			ImGui::End();

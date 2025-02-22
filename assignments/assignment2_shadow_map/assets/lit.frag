@@ -7,6 +7,7 @@ in Surface{
 	vec3 WorldNormal;
 	vec2 TexCoord;
 	vec3 Tangent;
+	vec4 FragPosLightSpace;
 }fs_in;
 
 struct Material{
@@ -29,6 +30,7 @@ struct DirectionalLight {
 
 layout(binding = 0) uniform sampler2D _MainTex;
 layout(binding = 1) uniform sampler2D _NormalMap;
+layout(binding = 2) uniform sampler2D _ShadowMap;
 
 uniform Material _Material;
 uniform Light _Light;
@@ -63,6 +65,26 @@ vec3 calcLightDir() {
 		return _DirectionalLight.dir;
 	else
 		return normalize(_Light.pos - fs_in.WorldPos);
+}
+
+float calcShadow(vec4 FragPosLightSpace, float shadowBias) {
+	// Frag Light Space pos in [-1,1]
+    vec3 projCoords = FragPosLightSpace.xyz / FragPosLightSpace.w;
+
+	// Remap to [0,1]
+	projCoords = projCoords * 0.5 + 0.5; 
+
+	float closestDepth = texture(_ShadowMap, projCoords.xy).r;
+	float currentDepth = projCoords.z;
+
+	float shadow = currentDepth - shadowBias > closestDepth  ? 1.0 : 0.0;
+	
+	return shadow;
+}
+
+float calcShadowBias(vec3 normal, vec3 lightDir) {
+	float shadowBiasK = 0.005;
+	return max(0.05 * (1.0 - dot(normal, lightDir)), shadowBiasK);
 }
 
 void main() {	
@@ -105,7 +127,11 @@ void main() {
 	float diffuse = _Material.dK * max(dot(normal,lightDir),0.0);
 	float specular = _Material.sK * pow(max(dot(normal,h),0.0), _Material.shininess);
 
-	vec3 lightColor = (diffuse +  specular) * _Light.clr + ambientClr;
+	// Shadow
+	float shadow = calcShadow(fs_in.FragPosLightSpace, calcShadowBias(normal, lightDir));
+
+	// Combine Lighting
+	vec3 lightColor = (diffuse +  specular) * _Light.clr + (ambientClr + (1.0 - shadow));
 	vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
 
 	FragColor = vec4(objectColor * lightColor,1.0);
