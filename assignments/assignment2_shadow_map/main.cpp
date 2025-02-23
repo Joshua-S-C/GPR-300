@@ -43,7 +43,7 @@ ew::Transform planeTransform;
 
 jsc::Material material(1, .5, .5, 128);
 jsc::Light light(glm::vec3(1.0));
-jsc::DirectionalLight dirLight(glm::vec3(0.0, 1.0, 0.0), light.clr);
+jsc::DirectionalLight dirLight(glm::vec3(1.0, 1.0, 0.0), light.clr);
 
 struct AppSettings {
 	bool useNormalMap = true;
@@ -83,8 +83,10 @@ int main() {
 	camera.aspectRatio = (float)screenWidth / screenHeight;
 	camera.fov = 60.0f;
 
-	shadowCamera.position = glm::vec3(-2.0f, 4.0f, -1.0f);
+	float minShadowBias = 0.005, maxShadowBias = 0.05;
+ 	float shadowCamDistance = 3;
 	shadowCamera.target = glm::vec3(0.0f, 0.0f, 0.0f);
+	shadowCamera.position = glm::normalize(dirLight.dir) * shadowCamDistance;
 	shadowCamera.aspectRatio = (float)screenWidth / screenHeight;
 	shadowCamera.fov = 60.0f;
 
@@ -173,11 +175,12 @@ int main() {
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
 
-		camera.aspectRatio = (float)screenWidth / screenHeight;
-		shadowCamera.aspectRatio = (float)screenWidth / screenHeight;
-
 		cameraController.move(window, &camera, deltaTime);
 
+		camera.aspectRatio = (float)screenWidth / screenHeight;
+
+		shadowCamera.aspectRatio = (float)screenWidth / screenHeight;
+		shadowCamera.position = glm::normalize(dirLight.dir) * shadowCamDistance;
 
 		glClearColor(settings.clearClr.x, settings.clearClr.y, settings.clearClr.z, settings.clearClr.w);
 		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -237,6 +240,9 @@ int main() {
 		shader.setBool("_UseNormalMap", settings.useNormalMap);
 		shader.setBool("_UseDirectionalLight", settings.useDirectionalLight);
 		shader.setBool("_UseAmbientClr", settings.useCustomAmbientClr);
+
+		shader.setFloat("_MinShadowBiasK", minShadowBias);
+		shader.setFloat("_MaxShadowBiasK", maxShadowBias);
 
 		// Textures
 		glActiveTexture(GL_TEXTURE1);
@@ -311,14 +317,23 @@ int main() {
 		}
 		*/
 
-		if (ImGui::CollapsingHeader("Scene Settings"))
+		if (ImGui::CollapsingHeader("Light & Shadow Settings"))
 		{
 			ImGui::Indent();
 
 			if (ImGui::Button("Reset Camera"))
 				resetCamera(&camera, &cameraController);
 
-			ImGui::Checkbox("Use Normal Map", &settings.useNormalMap);
+			ImGui::SliderFloat("Light Distance", &shadowCamDistance, 0, 10);
+
+			ImGui::Checkbox("Use Directional Light", &settings.useDirectionalLight);
+			if (settings.useDirectionalLight)
+				dirLight.drawUI();
+			else
+				light.drawUI();
+
+			ImGui::DragFloat("Min Shadow Bias", &minShadowBias, 0.001f, 0, 1);
+			ImGui::DragFloat("Max Shadow Bias", &maxShadowBias, 0.001f, 0, 1);
 
 			ImGui::Checkbox("Use Custom Ambient Clr", &settings.useCustomAmbientClr);
 
@@ -328,11 +343,16 @@ int main() {
 
 			ImGui::Combo("Render Type", &settings.renderTypeIndex, settings.renderTypeNames, IM_ARRAYSIZE(settings.renderTypeNames));
 
-			ImGui::Checkbox("Use Directional Light", &settings.useDirectionalLight);
-			if (settings.useDirectionalLight)
-				dirLight.drawUI();
-			else
-				light.drawUI();
+
+			ImGui::Unindent();
+		}
+
+		if (ImGui::CollapsingHeader("Scene Settings"))
+		{
+			ImGui::Indent();
+
+			ImGui::Checkbox("Use Normal Map", &settings.useNormalMap);
+
 
 			material.drawUI();
 

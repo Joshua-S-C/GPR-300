@@ -45,6 +45,9 @@ uniform bool _UseNormalMap;
 uniform bool _UseDirectionalLight;
 uniform int _RenderType;
 
+uniform float _MinShadowBiasK;
+uniform float _MaxShadowBiasK;
+
 // Use angent space Normal from Bump Map
 vec3 calcNormalFromMap() {
     vec3 normal = normalize(fs_in.WorldNormal);
@@ -103,12 +106,11 @@ float calcShadow(vec4 FragPosLightSpace, float shadowBias) {
 	if(projCoords.z > 1.0)
         shadow = 0.0;
 	
-	return shadow;
+	return 1.0 - shadow;
 }
 
 float calcShadowBias(vec3 normal, vec3 lightDir) {
-	float shadowBiasK = 0.005;
-	return max(0.05 * (1.0 - dot(normal, lightDir)), shadowBiasK);
+	return max(_MaxShadowBiasK * (1.0 - dot(normal, lightDir)), _MinShadowBiasK);
 }
 
 void main() {	
@@ -161,10 +163,10 @@ void main() {
 
 	//ambientClr += -shadow;
 	//diffuse += -shadow;
-	specular += -shadow;
+	//specular += -shadow;
 
-	vec3 lightColor = (diffuse +  specular) * _Light.clr + ambientClr;
-	//lightColor = lightColor + (-shadow);
+	vec3 lightColor = ((diffuse +  specular) * _Light.clr) * shadow + ambientClr;
+	//lightColor = lightColor * (1.0 - shadow);
 
 	vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
 

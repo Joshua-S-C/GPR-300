@@ -38,7 +38,7 @@ namespace jsc {
 
 		void drawUI() {
 			if (ImGui::CollapsingHeader("Directional Light")) {
-				ImGui::DragFloat3("Direction", &dir.x, .05f, -1.0f, 1.0f);
+				ImGui::SliderFloat3("Direction", &dir.x, -1.0f, 1.0f);
 				ImGui::DragFloat3("Position", &transform.position.x, .05f, -10.0f, 10.0f);
 				ImGui::ColorEdit3("Colour", &clr.x);
 			}
