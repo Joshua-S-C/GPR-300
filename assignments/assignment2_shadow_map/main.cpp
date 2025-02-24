@@ -18,6 +18,7 @@
 
 #include <jsc/light.h>
 #include <jsc/postProcessor.h>
+#include <jsc/framebuffer.h>
 
 typedef std::vector<jsc::PostProcessEffect*> EffectsList;
 
@@ -111,54 +112,20 @@ int main() {
 	depthShader.setInt("_DepthMap", 3);
 
 	// Post Processing
-	//if (true)
-	//{
-		jsc::PostProcessEffect* tintShader = new jsc::TintShader(ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"), 1);
-		jsc::PostProcessEffect* negativeShader = new jsc::NegativeShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/negative.frag"), 2);
-		jsc::PostProcessEffect* blurShader = new jsc::BoxBlurShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/boxBlur.frag"), 2);
+	jsc::PostProcessEffect* tintShader = new jsc::TintShader(ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"), 1);
+	//jsc::PostProcessEffect* negativeShader = new jsc::NegativeShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/negative.frag"), 2);
+	//jsc::PostProcessEffect* blurShader = new jsc::BoxBlurShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/boxBlur.frag"), 2);
 
-		EffectsList effects;
-		effects.push_back(tintShader);
-		effects.push_back(negativeShader);
-		effects.push_back(blurShader);
+	EffectsList effects;
+	effects.push_back(tintShader);
+	//effects.push_back(negativeShader);
+	//effects.push_back(blurShader);
 
-		//jsc::PostProcessor postProcessor(effects, screenWidth, screenHeight);
-		//postProcessor.updateTextureIndex(1);
-	//}
-
-	// Depth buffer creation
-	GLuint depthFBO;
-	glGenFramebuffers(1, &depthFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
+	jsc::PostProcessor postProcessor(effects, screenWidth, screenHeight);
+	postProcessor.updateTextureIndex(0);
 
 	const GLuint shadowWidth = 2048, shadowHeight = 2048;
-
-	// Depth texture creation
-	GLuint depthMap;
-	glGenTextures(1, &depthMap);
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, depthMap);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-		shadowWidth, shadowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-
-	// Attach them
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
-
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		printf("[Error] Framebuffer is not complete\n");
+	jsc::Framebuffer shadowFB = jsc::Framebuffer::createFramebufferDepth(shadowWidth, shadowHeight);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -183,7 +150,6 @@ int main() {
 		shadowCamera.position = glm::normalize(dirLight.dir) * shadowCamDistance;
 
 		glClearColor(settings.clearClr.x, settings.clearClr.y, settings.clearClr.z, settings.clearClr.w);
-		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 
@@ -193,12 +159,6 @@ int main() {
 		float nearPlane = 1.0f, farPlane = 7.5f;
 
 		lightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, nearPlane, farPlane);
-		// TODO Change this to use dir lights direction
-		//lightView = glm::lookAt(
-		//	glm::vec3(-2.0f, 4.0f, -1.0f),
-		//	glm::vec3(0.0f, 0.0f, 0.0f),
-		//	glm::vec3(0.0f, 1.0f, 0.0f)); 
-		
 		lightView = glm::lookAt(
 			glm::vec3(shadowCamera.position.x, shadowCamera.position.y, shadowCamera.position.z),
 			glm::vec3(shadowCamera.target.x, shadowCamera.target.y, shadowCamera.target.z),
@@ -207,7 +167,7 @@ int main() {
 		lightSpaceMatrix = lightProj * lightView;
 
 		glViewport(0, 0, shadowWidth, shadowHeight);
-		glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, shadowFB.fbo);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
 		glCullFace(GL_FRONT);
@@ -226,8 +186,8 @@ int main() {
 // Lighting Pass --------------------------------------------------------*/
 
 		// Back to default FB
-		//postProcessor.preRender();
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		postProcessor.preRender();
+		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, screenWidth, screenHeight);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -252,7 +212,7 @@ int main() {
 		glBindTexture(GL_TEXTURE_2D, normalMap);
 
 		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, depthMap);
+		glBindTexture(GL_TEXTURE_2D, shadowFB.depthBuffer);
 
 		shader.setInt("_MainTex", 1);
 		shader.setInt("_NormalMap", 2);
@@ -269,8 +229,8 @@ int main() {
 		planeMesh.draw();
 
 // Post Process Pass ----------------------------------------------------*/
-		//postProcessor.render();
-		//postProcessor.draw();
+		postProcessor.render();
+		postProcessor.draw();
 
 // More -----------------------------------------------------------------*/
 		//drawUI();
@@ -281,7 +241,7 @@ int main() {
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui::NewFrame();
 
-		//postProcessor.drawUIWindow();
+		postProcessor.drawUIWindow();
 		//postProcessor.drawDebugUIWindow();
 
 		// Shadow Map UI
@@ -291,7 +251,7 @@ int main() {
 
 		float ratio = guiWidth / shadowWidth;
 		ImVec2 imageDrawSize = ImVec2(shadowWidth * ratio, shadowHeight * ratio);
-		ImGui::Image((ImTextureID)depthMap, imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
+		ImGui::Image((ImTextureID)shadowFB.depthBuffer, imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
 		
 		ImGui::End();
 
