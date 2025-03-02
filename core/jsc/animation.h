@@ -44,21 +44,26 @@ namespace jsc {
 						ImGui::PushID(i);
 						ImGui::Indent();
 
-						ImGui::DragFloat("Time", &posKeys[i].time, 0.1f);
-						ImGui::DragFloat3("Value", &posKeys[i].value.x, 0.1f);
-						ImGui::Combo("Ease Function", &posKeys[i].easeType, EasingNames, 3);
+						ImGui::DragFloat("Time Pos", &posKeys[i].time, 0.1f);
+						ImGui::DragFloat3("Value Pos", &posKeys[i].value.x, 0.1f);
+						ImGui::Combo("Ease Function Pos", &posKeys[i].easeType, EasingNames, AllEasingFuncs.size());
 
-						if (ImGui::Button("Remove")) {
-							posKeys.erase(posKeys.begin() + i);
-							//std::sort(posKeys.begin(), posKeys.end(), compareKeyTimes);
-						}
+						//if (ImGui::Button("Remove")) {
+						//	posKeys.erase(posKeys.begin() + i);
+						//	//std::sort(posKeys.begin(), posKeys.end(), compareKeyTimes);
+						//}
 						ImGui::Dummy(ImVec2(0, 2));
 					
 						ImGui::Unindent();
 						ImGui::PopID();
 				}
 
-				if (ImGui::Button("Add")) {
+				if (ImGui::Button("Remove Pos")) {
+					if (!posKeys.empty())
+						posKeys.erase(std::find(posKeys.begin(), posKeys.end(), posKeys.back()));
+				}
+
+				if (ImGui::Button("Add Pos")) {
 					posKeys.push_back(KeyFrame<glm::vec3>(-1, glm::vec3(0,0,0)));
 				}
 			}
@@ -69,19 +74,26 @@ namespace jsc {
 					ImGui::PushID(i);
 					ImGui::Indent();
 
-					ImGui::DragFloat("Time", &scaleKeys[i].time, 0.1f);
-					ImGui::DragFloat3("Value", &scaleKeys[i].value.x, 0.1f);
+					ImGui::DragFloat("Time Scl", &scaleKeys[i].time, 0.1f);
+					ImGui::DragFloat3("Value Scl", &scaleKeys[i].value.x, 0.1f);
+					ImGui::Combo("Ease Function Pos Scl", &scaleKeys[i].easeType, EasingNames, AllEasingFuncs.size());
 
-					if (ImGui::Button("Remove")) {
-						scaleKeys.erase(scaleKeys.begin() + i);
-					}
+
+					//if (ImGui::Button("Remove")) {
+					//	scaleKeys.erase(scaleKeys.begin() + i);
+					//}
 
 					ImGui::Dummy(ImVec2(0, 2));
 					ImGui::Unindent();
 					ImGui::PopID();
 				}
 
-				if (ImGui::Button("Add")) {
+				if (ImGui::Button("Remove Scale")) {
+					if (!scaleKeys.empty())
+						scaleKeys.erase(std::find(scaleKeys.begin(), scaleKeys.end(), scaleKeys.back()));
+				}
+
+				if (ImGui::Button("Add Scale")) {
 					scaleKeys.push_back(KeyFrame<glm::vec3>(-1, glm::vec3(0, 0, 0)));
 				}
 			}
@@ -94,17 +106,23 @@ namespace jsc {
 
 					ImGui::DragFloat("Time", &rotKeys[i].time, 0.1f);
 					ImGui::DragFloat3("Value", &rotKeys[i].value.x, 0.1f);
+					ImGui::Combo("Ease Function Pos Rot", &rotKeys[i].easeType, EasingNames, AllEasingFuncs.size());
 
-					if (ImGui::Button("Remove")) {
-						rotKeys.erase(rotKeys.begin() + i);
-					}
+					//if (ImGui::Button("Remove")) {
+					//	rotKeys.erase(rotKeys.begin() + i);
+					//}
 
 					ImGui::Dummy(ImVec2(0, 2));
 					ImGui::Unindent();
 					ImGui::PopID();
 				}
 
-				if (ImGui::Button("Add")) {
+				if (ImGui::Button("Remove Rot")) {
+					if (!rotKeys.empty())
+						rotKeys.erase(std::find(rotKeys.begin(), rotKeys.end(), rotKeys.back()));
+				}
+
+				if (ImGui::Button("Add Rot")) {
 					rotKeys.push_back(KeyFrame<glm::vec3>(-1, glm::vec3(0, 0, 0)));
 				}
 			}
