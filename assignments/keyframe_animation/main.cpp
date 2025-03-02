@@ -22,7 +22,7 @@
 #include <jsc/animation.h>
 
 typedef std::vector<jsc::PostProcessEffect*> EffectsList;
-typedef std::vector<jsc::KeyFrame> Keys;
+typedef std::vector<jsc::KeyFrame<glm::vec3>> KeysVec3;
 
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
@@ -116,13 +116,9 @@ int main() {
 
 	// Post Processing
 	jsc::PostProcessEffect* tintShader = new jsc::TintShader(ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"), 1);
-	//jsc::PostProcessEffect* negativeShader = new jsc::NegativeShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/negative.frag"), 2);
-	//jsc::PostProcessEffect* blurShader = new jsc::BoxBlurShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/boxBlur.frag"), 2);
 
 	EffectsList effects;
 	effects.push_back(tintShader);
-	//effects.push_back(negativeShader);
-	//effects.push_back(blurShader);
 
 	jsc::PostProcessor postProcessor(effects, screenWidth, screenHeight);
 	postProcessor.updateTextureIndex(0);
@@ -133,8 +129,18 @@ int main() {
 
 	// Animation
 	jsc::Animator animator;
+
 	animator.clip = new jsc::AnimationClip();
 	animator.clip->duration = 5;
+
+	animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0,0,0)));
+	animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0,2,0)));
+
+	animator.clip->scaleKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(1,1,1)));
+	animator.clip->scaleKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(2,2,2)));
+
+	animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0,0,0)));
+	animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0,3,0)));
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -160,10 +166,17 @@ int main() {
 
 		glClearColor(settings.clearClr.x, settings.clearClr.y, settings.clearClr.z, settings.clearClr.w);
 		
-		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
+// Animation ------------------------------------------------------------*/
+		//animator.playbackTime = 1; // Debug
 
-		// Update Animator
 		animator.update(deltaTime);
+
+		monkeyTransform.position = 
+			animator.getValue(animator.clip->posKeys, monkeyTransform.position);
+		monkeyTransform.scale = 
+			animator.getValue(animator.clip->scaleKeys, monkeyTransform.scale);
+		monkeyTransform.rotation = 
+			animator.getValue(animator.clip->rotKeys, glm::eulerAngles(monkeyTransform.rotation));
 
 // Shadow Pass ----------------------------------------------------------*/
 
@@ -257,7 +270,7 @@ int main() {
 		//postProcessor.drawDebugUIWindow();
 
 		// Shadow Map UI
-		ImGui::SetNextWindowPos({ screenWidth - guiWidth,0 });
+		ImGui::SetNextWindowPos({ screenWidth - guiWidth * 2,0 });
 		ImGui::SetNextWindowSize({ guiWidth, guiWidth });
 		ImGui::Begin("Shadow Map", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 
@@ -265,6 +278,15 @@ int main() {
 		ImVec2 imageDrawSize = ImVec2(shadowWidth * ratio, shadowHeight * ratio);
 		ImGui::Image((ImTextureID)shadowFB.depthBuffer, imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
 		
+		ImGui::End();
+
+		// Animator UI
+		ImGui::SetNextWindowPos({ screenWidth - guiWidth,0 });
+		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
+		ImGui::Begin("Animation", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
+
+		animator.showUI();
+
 		ImGui::End();
 
 
