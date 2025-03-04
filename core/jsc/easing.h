@@ -10,7 +10,7 @@ namespace jsc {
 	}
 	
 	template<class T>
-	T inverseLerp(T a, T b, T v) {
+	T inverseLerp(T a, T b, float v) {
 		return (v - a) / (b - a);
 	}
 

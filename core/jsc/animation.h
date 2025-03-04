@@ -163,6 +163,9 @@ namespace jsc {
 		/// <param name="fallbackValue">Value to return if there are no keys</param>
 		/// <returns>Lerped value</returns>
 		glm::vec3 getValue(KeysVec3 collection, glm::vec3 fallbackValue) {
+			// Debug
+			//playbackTime = 10.0f;
+			
 			if (collection.empty())
 				return fallbackValue;
 
@@ -182,21 +185,24 @@ namespace jsc {
 				}
 			}
 
-			// Stay on last frame if not infinity
-			if (!infinity && nextKey == nullptr) {
-				return collection.back().value;
-			}
-
-			// Lerp between last and first frame
+			// Infinity: Lerp between last and first frame
 			if (infinity && nextKey == nullptr) {
 				nextKey = &collection.front();
 				prevKey = &collection.back();
+
+				// Value to lerp to
+				float t = inverseLerp(prevKey->time, nextKey->time, 1 - (playbackTime - clip->duration));
+				t = ease(t, AllEasingFuncs[prevKey->easeType]);
+				return lerp(prevKey->value, nextKey->value, t);
+			}
+
+			// Stay on last frame
+			if (nextKey == nullptr) {
+				return collection.back().value;
 			}
 
 			// Next Key exists
-			if (nextKey != nullptr) {
-				prevKey = &collection[index - 1];
-			}
+			prevKey = &collection[index - 1];
 			
 			// Value to lerp to
 			float t = inverseLerp(prevKey->time, nextKey->time, playbackTime);
