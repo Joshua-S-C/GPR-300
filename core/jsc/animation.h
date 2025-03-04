@@ -1,7 +1,6 @@
 #include <glm/glm.hpp>
 #include <imgui.h>
-#include <algorithm>
-
+#include <vector>
 #include "../jsc/easing.h"
 
 namespace jsc {
