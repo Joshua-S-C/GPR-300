@@ -8,7 +8,7 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   )
 endif()
 
-project(EWRender)
+project(JupiRender)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/libs)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/libs)
@@ -28,3 +28,4 @@ add_subdirectory(assignments/assignment0)
 add_subdirectory(assignments/assignment1_post_processing)
 add_subdirectory(assignments/assignment2_shadow_map)
 add_subdirectory(assignments/keyframe_animation)
+add_subdirectory(assignments/splines)
