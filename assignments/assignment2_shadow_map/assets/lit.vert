@@ -15,7 +15,7 @@ out Surface{
 
 uniform mat4 _Model;			// Model->World Matrix
 uniform mat4 _ViewProjection;	// Combined View->Projection Matrix
-uniform mat4 _LightSpaceMatrix;	//
+uniform mat4 _LightSpaceMatrix; // To Light Space
 
 void main(){
 	vs_out.WorldPos = vec3(_Model * vec4(vPos, 1.0));

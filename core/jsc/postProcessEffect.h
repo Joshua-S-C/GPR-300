@@ -41,7 +41,7 @@ namespace jsc {
 	struct TintShader : public PostProcessEffect
 	{
 		bool active = true;
-		float tintStrength = 0.5;
+		float tintStrength = 0.2;
 		glm::vec3 tintColour = glm::vec3(1.0, 0.0, 1.0);
 
 		TintShader(ew::Shader shader, int screenTexIndex) :

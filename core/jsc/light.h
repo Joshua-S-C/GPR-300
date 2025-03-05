@@ -10,6 +10,7 @@
 #include <imgui.h>
 
 namespace jsc {
+	// TODO : Make interface and create diff light types
 	struct Light {
 		ew::Transform transform; // World Space
 		glm::vec3 clr; // RBG
@@ -28,6 +29,7 @@ namespace jsc {
 		}
 	};
 
+	// TODO : Don't actually need Transform in here lol
 	struct DirectionalLight : Light{
 		glm::vec3 dir;
 
