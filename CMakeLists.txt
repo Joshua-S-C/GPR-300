@@ -22,6 +22,7 @@ include(external/glfw.cmake)
 include(external/imgui.cmake)
 include(external/assimp.cmake)
 include(external/glm.cmake)
+include(external/imguizmo.cmake)
 
 add_subdirectory(core)
 add_subdirectory(assignments/assignment0)

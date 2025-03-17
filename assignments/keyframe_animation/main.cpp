@@ -21,6 +21,9 @@
 #include <jsc/framebuffer.h>
 #include <jsc/animation.h>
 
+// hey
+#include "../ImGuizmo.h"
+
 typedef std::vector<jsc::PostProcessEffect*> EffectsList;
 typedef std::vector<jsc::KeyFrame<glm::vec3>> KeysVec3;
 
