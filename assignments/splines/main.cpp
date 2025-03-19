@@ -20,6 +20,10 @@
 #include <jsc/postProcessor.h>
 #include <jsc/framebuffer.h>
 #include <jsc/animation.h>
+#include <jsc/spline.h>
+
+// hey
+#include "../ImGuizmo.h"
 
 typedef std::vector<jsc::PostProcessEffect*> EffectsList;
 typedef std::vector<jsc::KeyFrame<glm::vec3>> KeysVec3;
@@ -142,8 +146,47 @@ int main() {
 	animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0,0,0)));
 	animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0,3,0)));
 
-
 	// Splines
+	jsc::Spline spline1(ew::Shader( "assets/unlit.vert", "assets/unlit.frag"));
+
+	spline1.addPoint(
+		ew::Transform(glm::vec3(0.0f, 0.0f, 0.0f), 
+		glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
+		glm::vec3(1.0f, 1.0f, 1.0f))
+	);
+
+	spline1.addPoint(
+		ew::Transform(glm::vec3(1.0f, 1.0f, 0.0f), 
+		glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
+		glm::vec3(1.0f, 1.0f, 1.0f))
+	);
+
+	spline1.addPoint(
+		ew::Transform(glm::vec3(1.0f, 3.0f, 0.0f), 
+		glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
+		glm::vec3(1.0f, 1.0f, 1.0f))
+	);
+
+	spline1.refresh();
+
+
+	jsc::Spline spline2(ew::Shader("assets/unlit.vert", "assets/unlit.frag"));
+	spline2.clr = glm::vec3(1.0, 1.0, 0);
+	spline2.width = 1;
+
+	spline2.addPoint(
+		ew::Transform(glm::vec3(3.0f, 0.0f, 0.0f),
+			glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+			glm::vec3(1.0f, 1.0f, 1.0f))
+	);
+
+	spline2.addPoint(
+		ew::Transform(glm::vec3(1.0f, 1.0f, 0.0f),
+			glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+			glm::vec3(1.0f, 1.0f, 1.0f))
+	);
+
+	spline2.refresh();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -257,6 +300,10 @@ int main() {
 		shader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
 
+		// Splines
+		spline1.draw(camera);
+		spline2.draw(camera);
+
 // Post Process Pass ----------------------------------------------------*/
 		//postProcessor.render();
 		//postProcessor.draw();
@@ -293,7 +340,16 @@ int main() {
 
 		ImGui::End();
 
+		// Spline UI. 
+		ImGui::SetNextWindowPos({ screenWidth - guiWidth,20 });
+		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
+		ImGui::Begin("Spline 1", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 
+		spline1.showUI();
+
+		ImGui::End();
+
+		// The Rest of the UI
 		ImGui::SetNextWindowPos({ 0,0 });
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Settings", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
@@ -314,6 +370,7 @@ int main() {
 			ImGui::Unindent();
 		}
 		*/
+
 
 		if (ImGui::CollapsingHeader("Light & Shadow Settings"))
 		{
