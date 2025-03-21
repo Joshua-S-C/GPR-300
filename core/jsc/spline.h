@@ -4,9 +4,9 @@
 #include <imgui.h>
 
 #include "../ew/model.h"
-#include "ew/transform.h"
-#include "ew/shader.h"
-#include "ew/camera.h"
+#include "../ew/transform.h"
+#include "../ew/shader.h"
+#include "../ew/camera.h"
 
 #include "../jsc/animation.h"
 
@@ -31,6 +31,9 @@ namespace jsc {
 		std::vector<float> verts;
 
 		GLuint VAO, VBO;
+
+		GLuint velVAO, velVBO;
+
 
 		Spline(ew::Shader lineShader, ew::Shader pointShader) 
 			: lineShader(lineShader), pointShader(pointShader)
@@ -62,6 +65,11 @@ namespace jsc {
 				ctrl1 = controlPoints[index], ctrl2 = controlPoints[index + 1];
 
 			value.position = cubicBezierLerp(first.position, ctrl1.position, ctrl2.position, second.position, t);
+
+			value.rotation = glm::quat(
+				glm::normalize(cubicBezierLerpDeriv(first.position, ctrl1.position, ctrl2.position, second.position, t))
+			);
+
 			return value;
 		}
 
@@ -123,6 +131,58 @@ namespace jsc {
 				pointShader.setMat4("_Model", transform.modelMatrix());
 				pointMesh.draw();
 			}
+		}
+
+		void debugDrawVelocity(ew::Camera cam, float t) {
+			pointShader.use();
+			lineShader.setMat4("_ViewProjection", cam.projectionMatrix() * cam.viewMatrix());
+
+			ew::Transform vel = getValue(t);
+			vel.position += glm::eulerAngles(vel.rotation);
+			pointShader.setMat4("_Model", vel.modelMatrix());
+
+			ctrlPointMesh.draw();
+
+			return;
+			
+			// ignore this for now
+
+			// Draw lines
+			lineShader.use();
+			lineShader.setMat4("_ViewProjection", cam.projectionMatrix() * cam.viewMatrix());
+			lineShader.setVec3("_Color", glm::vec3(1.0, .5, .5));
+
+			std::vector<float> velVerts;
+
+			vel = getValue(t);
+
+			// Original Points
+			velVerts.push_back(vel.position.x);
+			velVerts.push_back(vel.position.y);
+			velVerts.push_back(vel.position.z);
+
+			// Velocity Points
+			velVerts.push_back(vel.position.x + glm::eulerAngles(vel.rotation).x);
+			velVerts.push_back(vel.position.x + glm::eulerAngles(vel.rotation).y);
+			velVerts.push_back(vel.position.x + glm::eulerAngles(vel.rotation).z);
+
+			// Draw
+			glGenVertexArrays(1, &velVAO);
+			glGenBuffers(1, &velVAO);
+			glBindVertexArray(velVAO);
+
+			glBindBuffer(GL_ARRAY_BUFFER, velVAO);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(velVerts) * velVerts.size(), velVerts.data(), GL_STATIC_DRAW);
+
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+			glEnableVertexAttribArray(0);
+
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
+
+			glBindVertexArray(velVAO);
+			glLineWidth(width);
+			glDrawArrays(GL_LINE_STRIP, 0, verts.size() / 3);
 		}
 
 		// Will need to update this to work with multiple splines

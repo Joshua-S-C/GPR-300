@@ -1,4 +1,5 @@
 #include <math.h>
+#include <concepts>
 
 /// Easing functions from https://easings.net/
 
@@ -16,7 +17,6 @@ namespace jsc {
 
 	template<class T>
 	T cubicBezierLerp(T a, T b, T c, T d, float v) {
-
 		// Same thing
 		T l1 = lerp(a, b, v);
 		T l2 = lerp(b, c, v);
@@ -34,6 +34,18 @@ namespace jsc {
 			3 * (v * v) * (1 - v) * c
 			+ pow(v, 3) * d;
 		*/
+	}
+
+	// Look at constraints if using C++ 20 and up
+
+	template<class T>
+	T cubicBezierLerpDeriv(T a, T b, T c, T d, float v) {
+		T p1 = (-(v * v * v) + 3 * (v * v) - 3 * v + 1) * a;
+		T p2 = (9 * (v * v) - 12 * v + 3) * b;
+		T p3 = (-9 * (v * v) + 6 * v) * c;
+		T p4 = (3 * (v * v)) * d;
+
+		return p1 + p2 + p3 + p4;
 	}
 
 	const float PI = 3.141592;

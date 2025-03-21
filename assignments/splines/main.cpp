@@ -102,7 +102,7 @@ int main() {
 	ew::Shader depthDebugShader = ew::Shader("assets/shadows/depth.vert", "assets/shadows/depth.frag");
 
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
-	ew::Transform monkeyTransform = ew::Transform(glm::vec3(0, 5, 0), glm::quat(), glm::vec3(1, 1, 1));
+	ew::Transform monkeyTransform = ew::Transform(glm::vec3(0, 5, 0), glm::quat(), glm::vec3(.2, .2, .2));
 	GLuint texture = ew::loadTexture("assets/Sand_Texture/Ground080_1K-PNG_Color.png");
 	GLuint normalMap = ew::loadTexture("assets/Sand_Texture/Ground080_1K-PNG_NormalDX.png");
 
@@ -227,7 +227,14 @@ int main() {
 
 		//animator.update(deltaTime);
 		
+		//monkeyTransform.position = spline1.getValue(animator.playbackTime).position + glm::eulerAngles(spline1.getValue(animator.playbackTime).rotation);
 		monkeyTransform.position = spline1.getValue(animator.playbackTime).position;
+		monkeyTransform.rotation = glm::lookAt(
+			monkeyTransform.position,
+			monkeyTransform.position + glm::eulerAngles(spline1.getValue(animator.playbackTime).rotation),
+			glm::vec3(0, 0, 1)
+		);
+			
 
 		//monkeyTransform.position = 
 		//	animator.getValue(animator.clip->posKeys, monkeyTransform.position);
@@ -267,6 +274,7 @@ int main() {
 		planeMesh.draw();
 		
 		glCullFace(GL_BACK);
+
 
 #pragma endregion
 
@@ -317,6 +325,7 @@ int main() {
 
 		// Splines
 		spline1.draw(camera);
+		spline1.debugDrawVelocity(camera, animator.playbackTime);
 		spline2.draw(camera);
 
 #pragma endregion
