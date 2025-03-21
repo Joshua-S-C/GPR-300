@@ -19,7 +19,6 @@
 #include <jsc/light.h>
 #include <jsc/postProcessor.h>
 #include <jsc/framebuffer.h>
-#include <jsc/animation.h>
 #include <jsc/spline.h>
 
 // hey
@@ -103,7 +102,7 @@ int main() {
 	ew::Shader depthDebugShader = ew::Shader("assets/shadows/depth.vert", "assets/shadows/depth.frag");
 
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
-	ew::Transform monkeyTransform;
+	ew::Transform monkeyTransform = ew::Transform(glm::vec3(0, 5, 0), glm::quat(), glm::vec3(1, 1, 1));
 	GLuint texture = ew::loadTexture("assets/Sand_Texture/Ground080_1K-PNG_Color.png");
 	GLuint normalMap = ew::loadTexture("assets/Sand_Texture/Ground080_1K-PNG_NormalDX.png");
 
@@ -135,7 +134,7 @@ int main() {
 	jsc::Animator animator;
 
 	animator.clip = new jsc::AnimationClip();
-	animator.clip->duration = 30;
+	animator.clip->duration = 2;
 
 	animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0,0,0)));
 	animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0,2,0)));
@@ -146,47 +145,57 @@ int main() {
 	animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0,0,0)));
 	animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0,3,0)));
 
+#pragma region Splines
+
 	// Splines
-	jsc::Spline spline1(ew::Shader( "assets/unlit.vert", "assets/unlit.frag"));
+	jsc::Spline spline1(
+		ew::Shader("assets/unlit_line.vert", "assets/unlit_line.frag"), 
+		ew::Shader("assets/unlit.vert", "assets/unlit.frag")
+	);
 
 	spline1.addPoint(
 		ew::Transform(glm::vec3(0.0f, 0.0f, 0.0f), 
+			glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
+			glm::vec3(1.0f, 1.0f, 1.0f))
+	);
+
+	spline1.addPoint(
+		ew::Transform(glm::vec3(5.0f, 0.0f, 0.0f), 
 		glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
 		glm::vec3(1.0f, 1.0f, 1.0f))
 	);
 
 	spline1.addPoint(
-		ew::Transform(glm::vec3(1.0f, 1.0f, 0.0f), 
-		glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
-		glm::vec3(1.0f, 1.0f, 1.0f))
-	);
-
-	spline1.addPoint(
-		ew::Transform(glm::vec3(1.0f, 3.0f, 0.0f), 
-		glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
-		glm::vec3(1.0f, 1.0f, 1.0f))
+		ew::Transform(glm::vec3(10.0f, 3.0f, 0.0f), 
+			glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
+			glm::vec3(1.0f, 1.0f, 1.0f))
 	);
 
 	spline1.refresh();
 
+	jsc::Spline spline2(
+		ew::Shader("assets/unlit_line.vert", "assets/unlit_line.frag"),
+		ew::Shader("assets/unlit.vert", "assets/unlit.frag")
+	);
 
-	jsc::Spline spline2(ew::Shader("assets/unlit.vert", "assets/unlit.frag"));
 	spline2.clr = glm::vec3(1.0, 1.0, 0);
 	spline2.width = 1;
 
 	spline2.addPoint(
-		ew::Transform(glm::vec3(3.0f, 0.0f, 0.0f),
+		ew::Transform(glm::vec3(-3.0f, 0.0f, 0.0f),
 			glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
 			glm::vec3(1.0f, 1.0f, 1.0f))
 	);
 
 	spline2.addPoint(
-		ew::Transform(glm::vec3(1.0f, 1.0f, 0.0f),
+		ew::Transform(glm::vec3(-5.0f, 1.0f, 0.0f),
 			glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
 			glm::vec3(1.0f, 1.0f, 1.0f))
 	);
 
 	spline2.refresh();
+
+#pragma endregion
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -213,20 +222,24 @@ int main() {
 		glClearColor(settings.clearClr.x, settings.clearClr.y, settings.clearClr.z, settings.clearClr.w);
 		
 // Animation ------------------------------------------------------------*/
+#pragma region Animation
 		//animator.playbackTime = 1; // Debug
 
 		//animator.update(deltaTime);
-		animator.playbackTime = 7;
+		
+		monkeyTransform.position = spline1.getValue(animator.playbackTime).position;
 
-		monkeyTransform.position = 
-			animator.getValue(animator.clip->posKeys, monkeyTransform.position);
-		monkeyTransform.scale = 
-			animator.getValue(animator.clip->scaleKeys, monkeyTransform.scale);
-		monkeyTransform.rotation = 
-			animator.getValue(animator.clip->rotKeys, glm::eulerAngles(monkeyTransform.rotation));
+		//monkeyTransform.position = 
+		//	animator.getValue(animator.clip->posKeys, monkeyTransform.position);
+		//monkeyTransform.scale = 
+		//	animator.getValue(animator.clip->scaleKeys, monkeyTransform.scale);
+		//monkeyTransform.rotation = 
+		//	animator.getValue(animator.clip->rotKeys, glm::eulerAngles(monkeyTransform.rotation));
+
+#pragma endregion
 
 // Shadow Pass ----------------------------------------------------------*/
-
+#pragma region Shadow Pass
 		glm::mat4 lightProj, lightView, lightSpaceMatrix;
 		float nearPlane = 1.0f, farPlane = 7.5f;
 
@@ -255,8 +268,10 @@ int main() {
 		
 		glCullFace(GL_BACK);
 
-// Lighting Pass --------------------------------------------------------*/
+#pragma endregion
 
+// Lighting Pass --------------------------------------------------------*/
+#pragma region Lighting Pass
 		// Back to default FB
 		//postProcessor.preRender();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -304,9 +319,14 @@ int main() {
 		spline1.draw(camera);
 		spline2.draw(camera);
 
+#pragma endregion
+
 // Post Process Pass ----------------------------------------------------*/
+#pragma region Post Process Pass
 		//postProcessor.render();
 		//postProcessor.draw();
+
+#pragma endregion
 
 // More -----------------------------------------------------------------*/
 		//drawUI();
@@ -321,15 +341,15 @@ int main() {
 		//postProcessor.drawDebugUIWindow();
 
 		// Shadow Map UI
-		ImGui::SetNextWindowPos({ screenWidth - guiWidth * 2,0 });
-		ImGui::SetNextWindowSize({ guiWidth, guiWidth });
-		ImGui::Begin("Shadow Map", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
+		//ImGui::SetNextWindowPos({ screenWidth - guiWidth * 2,0 });
+		//ImGui::SetNextWindowSize({ guiWidth, guiWidth });
+		//ImGui::Begin("Shadow Map", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 
-		float ratio = guiWidth / shadowWidth;
-		ImVec2 imageDrawSize = ImVec2(shadowWidth * ratio, shadowHeight * ratio);
-		ImGui::Image((ImTextureID)shadowFB.depthBuffer, imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
-		
-		ImGui::End();
+		//float ratio = guiWidth / shadowWidth;
+		//ImVec2 imageDrawSize = ImVec2(shadowWidth * ratio, shadowHeight * ratio);
+		//ImGui::Image((ImTextureID)shadowFB.depthBuffer, imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
+		//
+		//ImGui::End();
 
 		// Animator UI
 		ImGui::SetNextWindowPos({ screenWidth - guiWidth,0 });
@@ -341,7 +361,7 @@ int main() {
 		ImGui::End();
 
 		// Spline UI. 
-		ImGui::SetNextWindowPos({ screenWidth - guiWidth,20 });
+		ImGui::SetNextWindowPos({ screenWidth - guiWidth * 2,0 });
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Spline 1", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 
@@ -371,6 +391,7 @@ int main() {
 		}
 		*/
 
+		ImGui::Text(std::to_string(spline1.getValue(animator.playbackTime).position.y).c_str());
 
 		if (ImGui::CollapsingHeader("Light & Shadow Settings"))
 		{
