@@ -154,10 +154,23 @@ int main() {
 	);
 
 	spline1.addPoint(
-		ew::Transform(glm::vec3(0.0f, 0.0f, 0.0f), 
-			glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
+		ew::Transform(glm::vec3(0.0f, 0.0f, 0.0f),
+			glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
 			glm::vec3(1.0f, 1.0f, 1.0f))
 	);
+
+	//spline1.addPoint(
+	//	ew::Transform(spline1.points.front().position + glm::eulerAngles(spline1.points.front().rotation) * spline1.points.front().scale,
+	//		glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+	//		glm::vec3(1.0f, 1.0f, 1.0f)
+	//	)
+	//);
+
+	//spline1.addPoint(
+	//	ew::Transform(glm::vec3(0.0f, 0.0f, 0.0f), 
+	//		glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
+	//		glm::vec3(1.0f, 1.0f, 1.0f))
+	//);
 
 	spline1.addPoint(
 		ew::Transform(glm::vec3(5.0f, 0.0f, 0.0f), 
@@ -165,13 +178,11 @@ int main() {
 		glm::vec3(1.0f, 1.0f, 1.0f))
 	);
 
-	spline1.addPoint(
-		ew::Transform(glm::vec3(10.0f, 3.0f, 0.0f), 
-			glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
-			glm::vec3(1.0f, 1.0f, 1.0f))
-	);
-
-	spline1.refresh();
+	//spline1.addPoint(
+	//	ew::Transform(glm::vec3(10.0f, 3.0f, 0.0f), 
+	//		glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
+	//		glm::vec3(1.0f, 1.0f, 1.0f))
+	//);
 
 	jsc::Spline spline2(
 		ew::Shader("assets/unlit_line.vert", "assets/unlit_line.frag"),
@@ -192,8 +203,6 @@ int main() {
 			glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
 			glm::vec3(1.0f, 1.0f, 1.0f))
 	);
-
-	spline2.refresh();
 
 #pragma endregion
 
