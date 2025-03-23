@@ -19,11 +19,11 @@ namespace jsc {
 	/// </summary>
 	struct ControlPoint 
 	{
-		ControlPoint(ew::Transform transform, ew::Transform(parent))
+		ControlPoint(ew::Transform transform, ew::Transform* parent)
 			:transform(transform), parent(parent)
 		{}
 		ew::Transform transform;
-		ew::Transform parent;
+		ew::Transform* parent;
 	};
 	typedef std::vector<ControlPoint> ControlPoints;
 
@@ -91,7 +91,7 @@ namespace jsc {
 
 			// TODO Add new control points in a smarter way
 			ew::Transform newCtrl = newPoint;
-			controlPoints.push_back(ControlPoint(newCtrl, newPoint));
+			controlPoints.push_back(ControlPoint(newCtrl, &newPoint));
 
 			newCtrl.position = newPoint.position + glm::eulerAngles(newPoint.rotation) + newPoint.scale;
 
@@ -144,7 +144,8 @@ namespace jsc {
 			
 			// Points
 			for each(ew::Transform transform in points) {
-				pointShader.setMat4("_Model", transform.modelMatrix());
+				glm::mat4 posMatrix = glm::translate(glm::mat4(1.0f), transform.position);
+				pointShader.setMat4("_Model", posMatrix);
 				pointMesh.draw();
 			}
 		}
@@ -261,12 +262,13 @@ namespace jsc {
 			for (int i = 0; i < controlPoints.size(); i++)
 			{
 				ew::Transform* ctrl = &controlPoints[i].transform;
-				ew::Transform* point = &controlPoints[i].parent;
+				ew::Transform* point = &points[i]; // o Im silly
 
-				//glm::mat4 rotMat = glm::toMat4(point.rotation);
-				//ctrl.position = point.position + glm::vec3(rotMat * glm::vec4(point.scale, 0.0));
+				// TODO Change UI to Euler Angles
+				glm::mat4 rotMat = glm::toMat4(point->rotation);
+				ctrl->position = point->position + glm::vec3(rotMat * glm::vec4(point->scale, 0.0));
 				//ctrl->position = point->position + point->scale;
-				ctrl->position = point->position + point->scale;
+				//ctrl->position = point->position + point->scale;
 			}
 		}
 
