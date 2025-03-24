@@ -14,10 +14,23 @@
 namespace jsc {
 	typedef std::vector<ew::Transform> Points;
 
+	/// <summary>
+	/// Helper class for splines
+	/// </summary>
+	struct ControlPoint 
+	{
+		ControlPoint(ew::Transform transform, ew::Transform* parent)
+			:transform(transform), parent(parent)
+		{}
+		ew::Transform transform;
+		ew::Transform* parent;
+	};
+	typedef std::vector<ControlPoint> ControlPoints;
+
 	struct Spline
 	{
 		Points points;
-		Points controlPoints;
+		ControlPoints controlPoints;
 
 		glm::vec3 clr = glm::vec3(.7, .2, .2);
 		float width = 5;
@@ -62,7 +75,7 @@ namespace jsc {
 			*/
 
 			ew::Transform first = points[index], second = points[index + 1],
-				ctrl1 = controlPoints[index], ctrl2 = controlPoints[index + 1];
+				ctrl1 = controlPoints[index].transform, ctrl2 = controlPoints[index + 1].transform;
 
 			value.position = cubicBezierLerp(first.position, ctrl1.position, ctrl2.position, second.position, t);
 
@@ -78,8 +91,11 @@ namespace jsc {
 
 			// TODO Add new control points in a smarter way
 			ew::Transform newCtrl = newPoint;
-			newCtrl.position.y += 2;
-			controlPoints.push_back(newCtrl);
+			controlPoints.push_back(ControlPoint(newCtrl, &newPoint));
+
+			newCtrl.position = newPoint.position + glm::eulerAngles(newPoint.rotation) + newPoint.scale;
+
+			refresh();
 		}
 
 		void removeLastPoint() {
@@ -121,21 +137,24 @@ namespace jsc {
 			pointShader.setVec3("_Color", clr);
 
 			// Control Points
-			for each(ew::Transform transform in controlPoints) {
-				pointShader.setMat4("_Model", transform.modelMatrix());
+			for each(ControlPoint ctrl in controlPoints) {
+				pointShader.setMat4("_Model", ctrl.transform.modelMatrix());
 				ctrlPointMesh.draw();
 			}
 			
 			// Points
 			for each(ew::Transform transform in points) {
-				pointShader.setMat4("_Model", transform.modelMatrix());
+				glm::mat4 posMatrix = glm::translate(glm::mat4(1.0f), transform.position);
+				pointShader.setMat4("_Model", posMatrix);
 				pointMesh.draw();
 			}
 		}
 
 		void debugDrawVelocity(ew::Camera cam, float t) {
 			pointShader.use();
-			lineShader.setMat4("_ViewProjection", cam.projectionMatrix() * cam.viewMatrix());
+			pointShader.setMat4("_ViewProjection", cam.projectionMatrix() * cam.viewMatrix());
+			pointShader.setVec3("_Color", glm::vec3(.1, 1, .1));
+
 
 			ew::Transform vel = getValue(t);
 			vel.position += glm::eulerAngles(vel.rotation);
@@ -217,7 +236,7 @@ namespace jsc {
 					ImGui::PushID(i + ID);
 					ImGui::Indent();
 
-					drawSplineControlTransformUI(controlPoints[i]);
+					drawSplineControlTransformUI(controlPoints[i].transform);
 
 					ImGui::Dummy(ImVec2(0, 5));
 					ImGui::Unindent();
@@ -240,15 +259,17 @@ namespace jsc {
 	private:
 		// Forward will be Z pos
 		void refreshControls() {
-			//for (int i = 0; i < controlPoints.size(); i++)
-			//{
-			//	ew::Transform ctrl = controlPoints[i];
-			//	ew::Transform first = points[i];
+			for (int i = 0; i < controlPoints.size(); i++)
+			{
+				ew::Transform* ctrl = &controlPoints[i].transform;
+				ew::Transform* point = &points[i]; // o Im silly
 
-			//	glm::mat4 rotMat = glm::toMat4(first.rotation);
-
-			//	ctrl.position = first.position + glm::vec3(rotMat * glm::vec4(first.scale, 0.0));
-			//}
+				// TODO Change UI to Euler Angles
+				glm::mat4 rotMat = glm::toMat4(point->rotation);
+				ctrl->position = point->position + glm::vec3(rotMat * glm::vec4(point->scale, 0.0));
+				//ctrl->position = point->position + point->scale;
+				//ctrl->position = point->position + point->scale;
+			}
 		}
 
 
@@ -262,7 +283,7 @@ namespace jsc {
 			for (int i = 0; i < points.size() - 1; i++) 
 			{
 				ew::Transform first = points[i], second = points[i + 1],
-					ctrl1 = controlPoints[i], ctrl2 = controlPoints[i + 1];
+					ctrl1 = controlPoints[i].transform, ctrl2 = controlPoints[i + 1].transform;
 
 				// First Vert
 				verts.push_back(first.position.x);
