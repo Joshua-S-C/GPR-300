@@ -19,11 +19,13 @@ namespace jsc {
 	/// </summary>
 	struct ControlPoint 
 	{
-		ControlPoint(ew::Transform transform, ew::Transform* parent)
-			:transform(transform), parent(parent)
+		ControlPoint(ew::Transform transform, ew::Transform* parent, bool opposite = false)
+			:transform(transform), parent(parent), opposite(opposite)
 		{}
+
 		ew::Transform transform;
 		ew::Transform* parent;
+		bool opposite = false;
 	};
 	typedef std::vector<ControlPoint> ControlPoints;
 
@@ -137,9 +139,21 @@ namespace jsc {
 			pointShader.setVec3("_Color", clr);
 
 			// Control Points
-			for each(ControlPoint ctrl in controlPoints) {
+			for (int i = 0; i < controlPoints.size(); i++) {
+				ControlPoint ctrl = controlPoints[i];
+
+				// Forward Control Point
 				pointShader.setMat4("_Model", ctrl.transform.modelMatrix());
 				ctrlPointMesh.draw();
+
+				// Backwards Control Point
+				//if (i != 0 && i != controlPoints.size()-1) {
+				//	ew::Transform tempTransform = ctrl.transform;
+				//	tempTransform.position = (tempTransform.position - points[i].position);
+
+				//	pointShader.setMat4("_Model", tempTransform.modelMatrix());
+				//	ctrlPointMesh.draw();
+				//}
 			}
 			
 			// Points
@@ -259,11 +273,35 @@ namespace jsc {
 	private:
 		// Forward will be Z pos
 		void refreshControls() {
+			//int ctrlIndex = 0;
+
+			//for (int i = 0; i < points.size(); i++)
+			//{
+			//	ew::Transform* point = &points[i];
+
+			//	// Forward
+			//	if (i != points.size() - 1) {
+			//		ew::Transform* ctrl = &controlPoints[ctrlIndex].transform;
+			//		glm::mat4 rotMat = glm::toMat4(point->rotation);
+			//		ctrl->position = point->position + glm::vec3(rotMat * glm::vec4(point->scale, 0.0));
+
+			//		ctrlIndex++;
+			//	}
+
+			//	// Backward
+			//	if (i != 0) {
+			//		ew::Transform* ctrl = &controlPoints[ctrlIndex].transform;
+			//		glm::mat4 rotMat = glm::toMat4(point->rotation);
+			//		ctrl->position = point->position + glm::vec3(rotMat * -glm::vec4(point->scale, 0.0));
+
+			//		ctrlIndex++;
+			//	}
+			//}
+
 			for (int i = 0; i < controlPoints.size(); i++)
 			{
 				ew::Transform* ctrl = &controlPoints[i].transform;
 				ew::Transform* point = &points[i]; // o Im silly
-
 				// TODO Change UI to Euler Angles
 				glm::mat4 rotMat = glm::toMat4(point->rotation);
 				ctrl->position = point->position + glm::vec3(rotMat * glm::vec4(point->scale, 0.0));
@@ -308,10 +346,32 @@ namespace jsc {
 
 		// shhh Ill make ui functions more consitent later
 		void drawSplineTransformUI(ew::Transform& transform) {
+			glm::vec3 rotVec = glm::eulerAngles(transform.rotation);
+			
+			//ImGui::Text((
+			//	"Quat: " +
+			//	std::to_string(transform.rotation.x) + "," +
+			//	std::to_string(transform.rotation.y) + "," +
+			//	std::to_string(transform.rotation.z) + "," +
+			//	std::to_string(transform.rotation.w) + ","
+			//).c_str());
+
+			//ImGui::Text((
+			//	"Euler" + 
+			//	std::to_string(rotVec.x) + "," + 
+			//	std::to_string(rotVec.y) + "," +
+			//	std::to_string(rotVec.z) + ","
+			//).c_str());
+
 			if (ImGui::DragFloat3("Position", &transform.position.x, .05f, -10.0f, 10.0f) ||
-				ImGui::DragFloat4("Rotation", &transform.rotation.x, .05f, -10.0f, 10.0f) ||
-				ImGui::DragFloat3("Scale", &transform.scale.x, .05f, -10.0f, 10.0f)) 
+				//ImGui::DragFloat4("Rotation", &transform.rotation.x, .05f, -10.0f, 10.0f) ||
+				ImGui::DragFloat3("Rotation", &rotVec.x, .05f, -10.0f, 10.0f) ||
+				ImGui::DragFloat("Scale", &transform.scale.x, .05f, -10.0f, 10.0f)) 
 			{
+				transform.rotation = glm::quat(rotVec);
+				transform.scale.y = transform.scale.x;
+				transform.scale.z = transform.scale.x;
+
 				refresh();
 			}
 
