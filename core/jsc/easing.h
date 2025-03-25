@@ -16,7 +16,7 @@ namespace jsc {
 	}
 
 	template<class T>
-	T cubicBezierLerp(T a, T b, T c, T d, float v) {
+	T cubicBezier(T a, T b, T c, T d, float v) {
 		// Same thing
 		T l1 = lerp(a, b, v);
 		T l2 = lerp(b, c, v);
@@ -36,10 +36,11 @@ namespace jsc {
 		*/
 	}
 
+	// From Tolstenko
 	// Look at constraints if using C++ 20 and up
 
 	template<class T>
-	T cubicBezierLerpDeriv(T a, T b, T c, T d, float v) {
+	T cubicBezierDeriv(T a, T b, T c, T d, float v) {
 		T p1 = (-(v * v * v) + 3 * (v * v) - 3 * v + 1) * a;
 		T p2 = (9 * (v * v) - 12 * v + 3) * b;
 		T p3 = (-9 * (v * v) + 6 * v) * c;

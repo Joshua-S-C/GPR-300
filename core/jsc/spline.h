@@ -66,23 +66,21 @@ namespace jsc {
 				index++;
 			}
 
-			/*
-			int index = 0;
-			float tempT = t;
-			float incrementSize = (1 / (float)points.size());
-			while (tempT >= incrementSize) {
-				index++;
-				tempT -= incrementSize;
+			// Out of range
+			if (index > points.size() - 2) {
+				value.position = points.back().position;
+				value.rotation = points.back().rotation;
+				
+				return value;
 			}
-			*/
 
 			ew::Transform first = points[index], second = points[index + 1],
 				ctrl1 = controlPoints[index].transform, ctrl2 = controlPoints[index + 1].transform;
 
-			value.position = cubicBezierLerp(first.position, ctrl1.position, ctrl2.position, second.position, t);
+			value.position = cubicBezier(first.position, ctrl1.position, ctrl2.position, second.position, t);
 
 			value.rotation = glm::quat(
-				glm::normalize(cubicBezierLerpDeriv(first.position, ctrl1.position, ctrl2.position, second.position, t))
+				glm::normalize(cubicBezierDeriv(first.position, ctrl1.position, ctrl2.position, second.position, t))
 			);
 
 			return value;
@@ -101,8 +99,13 @@ namespace jsc {
 		}
 
 		void removeLastPoint() {
+			if (points.size() <= 2)
+				return;
+			
 			points.pop_back();
 			controlPoints.pop_back();
+
+			refresh();
 		}
 
 		void refresh() {
@@ -147,13 +150,14 @@ namespace jsc {
 				ctrlPointMesh.draw();
 
 				// Backwards Control Point
-				//if (i != 0 && i != controlPoints.size()-1) {
-				//	ew::Transform tempTransform = ctrl.transform;
-				//	tempTransform.position = (tempTransform.position - points[i].position);
+				if (i != 0 && i != controlPoints.size() - 1) {
+					ew::Transform tempTransform = ctrl.transform;
+					glm::vec3 c2p = (points[i].position - tempTransform.position);
+					tempTransform.position += c2p * 2.0f;
 
-				//	pointShader.setMat4("_Model", tempTransform.modelMatrix());
-				//	ctrlPointMesh.draw();
-				//}
+					pointShader.setMat4("_Model", tempTransform.modelMatrix());
+					ctrlPointMesh.draw();
+				}
 			}
 			
 			// Points
@@ -177,45 +181,6 @@ namespace jsc {
 			ctrlPointMesh.draw();
 
 			return;
-			
-			// ignore this for now
-
-			// Draw lines
-			lineShader.use();
-			lineShader.setMat4("_ViewProjection", cam.projectionMatrix() * cam.viewMatrix());
-			lineShader.setVec3("_Color", glm::vec3(1.0, .5, .5));
-
-			std::vector<float> velVerts;
-
-			vel = getValue(t);
-
-			// Original Points
-			velVerts.push_back(vel.position.x);
-			velVerts.push_back(vel.position.y);
-			velVerts.push_back(vel.position.z);
-
-			// Velocity Points
-			velVerts.push_back(vel.position.x + glm::eulerAngles(vel.rotation).x);
-			velVerts.push_back(vel.position.x + glm::eulerAngles(vel.rotation).y);
-			velVerts.push_back(vel.position.x + glm::eulerAngles(vel.rotation).z);
-
-			// Draw
-			glGenVertexArrays(1, &velVAO);
-			glGenBuffers(1, &velVAO);
-			glBindVertexArray(velVAO);
-
-			glBindBuffer(GL_ARRAY_BUFFER, velVAO);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(velVerts) * velVerts.size(), velVerts.data(), GL_STATIC_DRAW);
-
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-			glEnableVertexAttribArray(0);
-
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glBindVertexArray(0);
-
-			glBindVertexArray(velVAO);
-			glLineWidth(width);
-			glDrawArrays(GL_LINE_STRIP, 0, verts.size() / 3);
 		}
 
 		// Will need to update this to work with multiple splines
@@ -243,72 +208,28 @@ namespace jsc {
 					ImGui::PopID();
 				}
 
-				// Temp
-				ImGui::Text("Control Points");
-				for (int i = 0; i < controlPoints.size(); i++)
-				{
-					ImGui::PushID(i + ID);
-					ImGui::Indent();
+				if (ImGui::Button("Add Point"))
+					addPoint(ew::Transform(
+						points.back().position + glm::vec3(1,0,0),
+						glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+						glm::vec3(1,1,1)
+					));
 
-					drawSplineControlTransformUI(controlPoints[i].transform);
-
-					ImGui::Dummy(ImVec2(0, 5));
-					ImGui::Unindent();
-					ImGui::PopID();
-				}
-
-				if (ImGui::Button("Add Point")) {
-					addPoint(ew::Transform());
-					refresh();
-				}
-
-				if (ImGui::Button("Remove Point")) {
+				if (ImGui::Button("Remove Point"))
 					removeLastPoint();
-					refresh();
-				}
 
 			}
 		}
 
 	private:
-		// Forward will be Z pos
 		void refreshControls() {
-			//int ctrlIndex = 0;
-
-			//for (int i = 0; i < points.size(); i++)
-			//{
-			//	ew::Transform* point = &points[i];
-
-			//	// Forward
-			//	if (i != points.size() - 1) {
-			//		ew::Transform* ctrl = &controlPoints[ctrlIndex].transform;
-			//		glm::mat4 rotMat = glm::toMat4(point->rotation);
-			//		ctrl->position = point->position + glm::vec3(rotMat * glm::vec4(point->scale, 0.0));
-
-			//		ctrlIndex++;
-			//	}
-
-			//	// Backward
-			//	if (i != 0) {
-			//		ew::Transform* ctrl = &controlPoints[ctrlIndex].transform;
-			//		glm::mat4 rotMat = glm::toMat4(point->rotation);
-			//		ctrl->position = point->position + glm::vec3(rotMat * -glm::vec4(point->scale, 0.0));
-
-			//		ctrlIndex++;
-			//	}
-			//}
-
 			for (int i = 0; i < controlPoints.size(); i++)
 			{
 				ew::Transform* ctrl = &controlPoints[i].transform;
-				ew::Transform* point = &points[i]; // o Im silly
+				ew::Transform* point = &points[i];
 
-				// TODO Change UI to Euler Angles
-				//glm::mat4 rotMat = glm::toMat4(point->rotation);
-				glm::mat4 rotMat = glm::toMat4(point->eulerRot);
+				glm::mat4 rotMat = glm::toMat4(glm::quat(point->eulerRot));
 				ctrl->position = point->position + glm::vec3(rotMat * glm::vec4(point->scale, 0.0));
-				//ctrl->position = point->position + point->scale;
-				//ctrl->position = point->position + point->scale;
 			}
 		}
 
@@ -334,9 +255,9 @@ namespace jsc {
 				float lerpIncrement = 1 / (float)subdivs;
 				for (float lerpK = lerpIncrement; lerpK < 1; lerpK += lerpIncrement)
 				{
-					verts.push_back(cubicBezierLerp(first.position.x, ctrl1.position.x, ctrl2.position.x, second.position.x, lerpK));
-					verts.push_back(cubicBezierLerp(first.position.y, ctrl1.position.y, ctrl2.position.y, second.position.y, lerpK));
-					verts.push_back(cubicBezierLerp(first.position.z, ctrl1.position.z, ctrl2.position.z, second.position.z, lerpK));
+					verts.push_back(cubicBezier(first.position.x, ctrl1.position.x, ctrl2.position.x, second.position.x, lerpK));
+					verts.push_back(cubicBezier(first.position.y, ctrl1.position.y, ctrl2.position.y, second.position.y, lerpK));
+					verts.push_back(cubicBezier(first.position.z, ctrl1.position.z, ctrl2.position.z, second.position.z, lerpK));
 				}
 
 				// Last Vert
@@ -346,40 +267,29 @@ namespace jsc {
 			}
 		}
 
-		// shhh Ill make ui functions more consitent later
 		void drawSplineTransformUI(ew::Transform& transform) {
-			ImGui::Text((
-				"Quat: " +
-				std::to_string(transform.rotation.x) + "," +
-				std::to_string(transform.rotation.y) + "," +
-				std::to_string(transform.rotation.z) + "," +
-				std::to_string(transform.rotation.w) + ","
-			).c_str());
-
-			ImGui::Text((
-				"Euler" + 
-				std::to_string(transform.eulerRot.x) + "," +
-				std::to_string(transform.eulerRot.y) + "," +
-				std::to_string(transform.eulerRot.z) + ","
-			).c_str());
+			//ImGui::Text((
+			//	"Quat: " +
+			//	std::to_string(transform.rotation.x) + "," +
+			//	std::to_string(transform.rotation.y) + "," +
+			//	std::to_string(transform.rotation.z) + "," +
+			//	std::to_string(transform.rotation.w) + ","
+			//).c_str());
+			//ImGui::Text((
+			//	"Euler" + 
+			//	std::to_string(transform.eulerRot.x) + "," +
+			//	std::to_string(transform.eulerRot.y) + "," +
+			//	std::to_string(transform.eulerRot.z) + ","
+			//).c_str());
 
 			if (ImGui::DragFloat3("Position", &transform.position.x, .05f, -10.0f, 10.0f) ||
-				ImGui::DragFloat4("Rotation", &transform.rotation.x, .05f, -10.0f, 10.0f) ||
-				ImGui::DragFloat3("ERotation", &transform.eulerRot.x, .05f, -10.0f, 10.0f) ||
-				ImGui::DragFloat("Scale", &transform.scale.x, .05f, -10.0f, 10.0f)) 
+				ImGui::DragFloat2("Rotation", &transform.eulerRot.x, .05f, 0.0f, 6.28f) ||
+				ImGui::DragFloat("Scale", &transform.scale.x, .05f, -10.0f, 10.0f))
 			{
-				//transform.rotation = glm::quat(rotVec);
+				transform.rotation = glm::quat(transform.eulerRot);
 				transform.scale.y = transform.scale.x;
 				transform.scale.z = transform.scale.x;
 
-				refresh();
-			}
-
-		}
-
-		void drawSplineControlTransformUI(ew::Transform& transform) {
-			if (ImGui::DragFloat3("Position", &transform.position.x, .05f, -10.0f, 10.0f))
-			{
 				refresh();
 			}
 		}
