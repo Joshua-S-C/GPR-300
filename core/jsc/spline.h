@@ -346,7 +346,7 @@ namespace jsc {
 
 		// shhh Ill make ui functions more consitent later
 		void drawSplineTransformUI(ew::Transform& transform) {
-			glm::vec3 rotVec = glm::eulerAngles(transform.rotation);
+			//glm::vec3 rotVec = glm::eulerAngles(transform.rotation);
 			
 			//ImGui::Text((
 			//	"Quat: " +
@@ -364,11 +364,11 @@ namespace jsc {
 			//).c_str());
 
 			if (ImGui::DragFloat3("Position", &transform.position.x, .05f, -10.0f, 10.0f) ||
-				//ImGui::DragFloat4("Rotation", &transform.rotation.x, .05f, -10.0f, 10.0f) ||
-				ImGui::DragFloat3("Rotation", &rotVec.x, .05f, -10.0f, 10.0f) ||
+				ImGui::DragFloat4("Rotation", &transform.rotation.x, .05f, -10.0f, 10.0f) ||
+				//ImGui::DragFloat3("Rotation", &rotVec.x, .05f, -10.0f, 10.0f) ||
 				ImGui::DragFloat("Scale", &transform.scale.x, .05f, -10.0f, 10.0f)) 
 			{
-				transform.rotation = glm::quat(rotVec);
+				//transform.rotation = glm::quat(rotVec);
 				transform.scale.y = transform.scale.x;
 				transform.scale.z = transform.scale.x;
 
