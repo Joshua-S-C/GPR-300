@@ -302,8 +302,10 @@ namespace jsc {
 			{
 				ew::Transform* ctrl = &controlPoints[i].transform;
 				ew::Transform* point = &points[i]; // o Im silly
+
 				// TODO Change UI to Euler Angles
-				glm::mat4 rotMat = glm::toMat4(point->rotation);
+				//glm::mat4 rotMat = glm::toMat4(point->rotation);
+				glm::mat4 rotMat = glm::toMat4(point->eulerRot);
 				ctrl->position = point->position + glm::vec3(rotMat * glm::vec4(point->scale, 0.0));
 				//ctrl->position = point->position + point->scale;
 				//ctrl->position = point->position + point->scale;
@@ -346,26 +348,24 @@ namespace jsc {
 
 		// shhh Ill make ui functions more consitent later
 		void drawSplineTransformUI(ew::Transform& transform) {
-			//glm::vec3 rotVec = glm::eulerAngles(transform.rotation);
-			
-			//ImGui::Text((
-			//	"Quat: " +
-			//	std::to_string(transform.rotation.x) + "," +
-			//	std::to_string(transform.rotation.y) + "," +
-			//	std::to_string(transform.rotation.z) + "," +
-			//	std::to_string(transform.rotation.w) + ","
-			//).c_str());
+			ImGui::Text((
+				"Quat: " +
+				std::to_string(transform.rotation.x) + "," +
+				std::to_string(transform.rotation.y) + "," +
+				std::to_string(transform.rotation.z) + "," +
+				std::to_string(transform.rotation.w) + ","
+			).c_str());
 
-			//ImGui::Text((
-			//	"Euler" + 
-			//	std::to_string(rotVec.x) + "," + 
-			//	std::to_string(rotVec.y) + "," +
-			//	std::to_string(rotVec.z) + ","
-			//).c_str());
+			ImGui::Text((
+				"Euler" + 
+				std::to_string(transform.eulerRot.x) + "," +
+				std::to_string(transform.eulerRot.y) + "," +
+				std::to_string(transform.eulerRot.z) + ","
+			).c_str());
 
 			if (ImGui::DragFloat3("Position", &transform.position.x, .05f, -10.0f, 10.0f) ||
 				ImGui::DragFloat4("Rotation", &transform.rotation.x, .05f, -10.0f, 10.0f) ||
-				//ImGui::DragFloat3("Rotation", &rotVec.x, .05f, -10.0f, 10.0f) ||
+				ImGui::DragFloat3("ERotation", &transform.eulerRot.x, .05f, -10.0f, 10.0f) ||
 				ImGui::DragFloat("Scale", &transform.scale.x, .05f, -10.0f, 10.0f)) 
 			{
 				//transform.rotation = glm::quat(rotVec);
