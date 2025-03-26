@@ -26,6 +26,7 @@
 
 typedef std::vector<jsc::PostProcessEffect*> EffectsList;
 typedef std::vector<jsc::KeyFrame<glm::vec3>> KeysVec3;
+typedef std::vector<jsc::Object*> Objects;
 
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
@@ -74,6 +75,8 @@ struct AppSettings {
 	};
 }settings;
 
+Objects objs;
+jsc::Object* selected = nullptr;
 
 int main() {
 	GLFWwindow* window = initWindow("Assignment 4 - Splines", screenWidth, screenHeight);
@@ -150,7 +153,8 @@ int main() {
 	// Splines
 	jsc::Spline spline1(
 		ew::Shader("assets/unlit_line.vert", "assets/unlit_line.frag"), 
-		ew::Shader("assets/unlit.vert", "assets/unlit.frag")
+		ew::Shader("assets/unlit.vert", "assets/unlit.frag"),
+		"Spline 1"
 	);
 
 	spline1.addPoint(
@@ -186,7 +190,8 @@ int main() {
 
 	jsc::Spline spline2(
 		ew::Shader("assets/unlit_line.vert", "assets/unlit_line.frag"),
-		ew::Shader("assets/unlit.vert", "assets/unlit.frag")
+		ew::Shader("assets/unlit.vert", "assets/unlit.frag"),
+		"Spline 2"
 	);
 
 	spline2.clr = glm::vec3(1.0, 1.0, 0);
@@ -203,6 +208,9 @@ int main() {
 			glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
 			glm::vec3(1.0f, 1.0f, 1.0f))
 	);
+
+	objs.push_back(&spline1);
+	objs.push_back(&spline2);
 
 #pragma endregion
 
@@ -383,7 +391,7 @@ int main() {
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Spline 1", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 
-		spline1.showUI();
+		spline1.drawInspectorUI();
 
 		ImGui::End();
 
@@ -410,6 +418,13 @@ int main() {
 		*/
 
 		ImGui::Text(std::to_string(spline1.getValue(animator.playbackTime).position.y).c_str());
+
+		ImGui::Text("Objects");
+
+		for each(jsc::Object * obj in objs)
+		{
+			obj->drawSceneUI();
+		}
 
 		if (ImGui::CollapsingHeader("Light & Shadow Settings"))
 		{
@@ -444,6 +459,7 @@ int main() {
 		if (ImGui::CollapsingHeader("Scene Settings"))
 		{
 			ImGui::Indent();
+
 
 			ImGui::Checkbox("Use Normal Map", &settings.useNormalMap);
 
