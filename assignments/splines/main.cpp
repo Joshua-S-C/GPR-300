@@ -39,7 +39,7 @@ void drawTransformUI(ew::Transform &transform);
 void resetCamera(ew::Camera* camera, ew::CameraController* controller);
 
 //Global state
-int screenWidth = 1080;
+int screenWidth = 1580;
 int screenHeight = 720;
 float prevFrameTime;
 float deltaTime;
@@ -159,7 +159,6 @@ int main() {
 		ew::Shader("assets/unlit.vert", "assets/unlit.frag"),
 		"Spline 1"
 	);
-	spline1.subdivs = 25;
 
 	spline1.addPoint(
 		ew::Transform(glm::vec3(0.0f, 0.0f, 0.0f),
@@ -173,6 +172,10 @@ int main() {
 		glm::vec3(1.0f, 1.0f, 1.0f))
 	);
 
+	spline1.subdivs = 50;
+	spline1.refresh();
+
+	selected = &spline1;
 
 	//spline1.addPoint(
 	//	ew::Transform(glm::vec3(10.0f, 3.0f, 0.0f), 
@@ -397,24 +400,9 @@ int main() {
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Settings", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
-		/*
-		if (ImGui::CollapsingHeader("View Ping Pong Textures"))
-		{
-			ImGui::Indent();
-
-			ImGui::Text("Ping Pong 1");
-			float ratio = guiWidth / postProcessor.getWidthHeight().x;
-			ImVec2 imageDrawSize = ImVec2(postProcessor.getWidthHeight().x * ratio, postProcessor.getWidthHeight().y * ratio);
-			ImGui::Image((ImTextureID)postProcessor.getColourTextures()[0], imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
-			
-			ImGui::Text("Ping Pong 2");
-			ImGui::Image((ImTextureID)postProcessor.getColourTextures()[1], imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
-
-			ImGui::Unindent();
-		}
-		*/
-
-		ImGui::Text(std::to_string(spline1.getValue(animator.playbackTime).position.y).c_str());
+		// Actual T value
+		ImGui::Text("Real T");
+		ImGui::Text(std::to_string(spline1.lookupDistance(animator.playbackTime)).c_str());
 
 		ImGui::Text("Objects");
 

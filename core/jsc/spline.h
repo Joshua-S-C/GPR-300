@@ -43,10 +43,10 @@ namespace jsc {
 		// Settings
 		glm::vec3 clr = glm::vec3(.7, .2, .2);
 		float width = 5;
-		int subdivs = 10;
+		int subdivs = 50;
 
 		// Constant speed
-		bool constantSpeed = false;
+		bool constantSpeed = true;
 		float arcLength;
 		int arcLengthSamples = 10;
 		LUT lut;
@@ -78,6 +78,8 @@ namespace jsc {
 			ew::Transform value;
 			int index = 0;
 
+			// Go to proper point index. 
+			// Essentially remaps t to (0-1) and which pair of splines to apply that to
 			while (t > 1) {
 				t--;
 				index++;
@@ -105,20 +107,24 @@ namespace jsc {
 
 		float lookupDistance(Distance t) {
 			// Out of bounds: Extrapolate
-			if (t < 0 || t > lut.back().second)
+			if (t < 0 || t >= lut.back().first)
 				return t / arcLength;
 
 			for (int i = 0; i < lut.size()-1; i++)
 			{
 				// Find largest value
-				if (t >= lut[i].first)
+				if (t > lut[i+1].first)
 					continue;
 
-				float lerpK = inverseLerp(lut[i-1].second, lut[i].second, t);
 
-				t = lerp(lut[i].second, lut[i-1].second, lerpK);
+				return lut[i].second;
+				
+				float lerpK = inverseLerp(lut[i].second, lut[i+1].second, t);
+				t = lerp(lut[i].second, lut[i+1].second, lerpK);
 
-				//t = remap(t, lut[i].second, lut[i+1].second, i / (lut.size() - 1.0f), (i + 1) / (lut.size() - 1.0f));
+				// this remapping is doing nothing if t < 1
+				//t = remap(t, lut[i].second, lut[i+1].second, i / (lut.size() - 1.0f), (i + 1.0f) / (lut.size() - 1.0f));
+
 				return t;
 			}
 
@@ -206,10 +212,10 @@ namespace jsc {
 				pointMesh.draw();
 			}
 
-			// Center Point IG
-			pointShader.setMat4("_Model", transform.modelMatrix());
-			pointShader.setVec3("_Color", glm::vec3(0,1,1));
-			pointMesh.draw();
+			// Center Point just cuz
+			//pointShader.setMat4("_Model", transform.modelMatrix());
+			//pointShader.setVec3("_Color", glm::vec3(0,1,1));
+			//pointMesh.draw();
 		}
 
 		void debugDrawVelocity(ew::Camera cam, float t) {
@@ -228,17 +234,17 @@ namespace jsc {
 		}
 
 		void drawSceneUI() {
-			ImGui::Text("This a splin");
+			ImGui::Text("This a splin3");
 			ImGui::Text(name.c_str());
 		}
 
-		// Will need to update this to work with multiple splines
 		void drawInspectorUI() {
 			ImGui::Text("Spline Info Here");
 			ImGui::Text(("Arc Length: " + std::to_string(arcLength)).c_str());
 
-			if (ImGui::DragInt("AL Samples", &arcLengthSamples, 1, 0, 100))
-				calcArcLength();
+			if (ImGui::DragInt("AL Samples", &arcLengthSamples, 1, 0, 100)) {
+				refresh();
+			}
 
 			ImGui::Checkbox("Constant Speed", &constantSpeed);
 
@@ -249,6 +255,8 @@ namespace jsc {
 			}
 
 			// Temp
+			ImGui::Text("Splines");
+
 			int ID = 0;
 			for (ID = 0; ID < points.size(); ID++)
 			{
@@ -271,6 +279,28 @@ namespace jsc {
 
 			if (ImGui::Button("Remove Point"))
 				removeLastPoint();
+
+			// Temp also
+
+			ImGui::Columns(2);
+			ImGui::Text("Dist");
+			ImGui::NextColumn();
+			ImGui::Text("T");
+			ImGui::NextColumn();
+
+			for each (LUT_Type val in lut)
+			{
+
+				ImGui::Dummy(ImVec2(0, 5));
+				ImGui::NextColumn();
+				ImGui::Dummy(ImVec2(0, 5));
+				ImGui::NextColumn();
+
+				ImGui::Text(std::to_string(val.first).c_str());
+				ImGui::NextColumn();
+				ImGui::Text(std::to_string(val.second).c_str());
+				ImGui::NextColumn();
+			}
 
 		}
 
@@ -320,11 +350,15 @@ namespace jsc {
 			}
 		}
 
+		/// <summary>
+		/// Updates ArcLength and LUT vars
+		/// </summary>
 		void calcArcLength() {
 			int arcLengthIndex = 0;
 			arcLength = 0.0f;
 			std::vector<float> arcVerts;
 			lut.clear();
+			lut.push_back(LUT_Type(arcLength, 0));
 
 			// Set Verts for spline segments
 			for (int i = 0; i < points.size() - 1; i++)
@@ -337,8 +371,6 @@ namespace jsc {
 				arcVerts.push_back(first.position.y);
 				arcVerts.push_back(first.position.z);
 
-				lut.push_back(LUT_Type(arcLength, 0));
-
 				// Subdivisions
 				float lerpIncrement = 1 / (float)arcLengthSamples;
 				for (float lerpK = lerpIncrement; lerpK < 1; lerpK += lerpIncrement)
@@ -350,7 +382,7 @@ namespace jsc {
 					arcLength += vertDist(arcVerts, arcLengthIndex);
 					arcLengthIndex++;
 
-					lut.push_back(LUT_Type(arcLength, lerpK));
+					lut.push_back(LUT_Type(arcLength, i + lerpK));
 				}
 
 				// Last Vert
@@ -359,8 +391,10 @@ namespace jsc {
 				arcVerts.push_back(second.position.z);
 
 				arcLength += vertDist(arcVerts, arcLengthIndex);
-				lut.push_back(LUT_Type(arcLength, 1));
+				lut.push_back(LUT_Type(arcLength, i+1));
 			}
+
+			// IDK
 		}
 
 		/// <returns>Distance between Vertices in the verts array</returns>
