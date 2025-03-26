@@ -16,6 +16,11 @@ namespace jsc {
 	}
 
 	template<class T>
+	T remap(T value, T high1, T low1, T high2, T low2) {
+		return low2 + (value - low1) * (high2 - low2) / (high1 - low1);
+	}
+
+	template<class T>
 	T cubicBezier(T a, T b, T c, T d, float v) {
 		// Same thing
 		T l1 = lerp(a, b, v);
@@ -95,6 +100,8 @@ namespace jsc {
 	float ease(float t, float (*f)(float)) {
 		return f(t);
 	}
+
+	// ik this is silly btw, I mostly just did it to rember how function pointers work
 
 	const enum EasingType {
 		None = 0,

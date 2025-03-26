@@ -385,7 +385,7 @@ int main() {
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Spline 1", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 
-		spline1.showUI();
+		//spline1.showUI();
 
 		ImGui::End();
 

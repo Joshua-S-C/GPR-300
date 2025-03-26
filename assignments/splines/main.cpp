@@ -8,8 +8,8 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+//#include <glm/gtc/matrix_transform.hpp>
+//#include <glm/gtc/type_ptr.hpp>
 
 #include <ew/shader.h>
 #include <ew/model.h>
@@ -25,7 +25,7 @@
 #include <jsc/spline.h>
 
 // hey
-#include "../ImGuizmo.h"
+#include <../ImGuizmo.h>
 
 typedef std::vector<jsc::PostProcessEffect*> EffectsList;
 typedef std::vector<jsc::KeyFrame<glm::vec3>> KeysVec3;
@@ -159,6 +159,7 @@ int main() {
 		ew::Shader("assets/unlit.vert", "assets/unlit.frag"),
 		"Spline 1"
 	);
+	spline1.subdivs = 25;
 
 	spline1.addPoint(
 		ew::Transform(glm::vec3(0.0f, 0.0f, 0.0f),
@@ -166,24 +167,12 @@ int main() {
 			glm::vec3(1.0f, 1.0f, 1.0f))
 	);
 
-	//spline1.addPoint(
-	//	ew::Transform(spline1.points.front().position + glm::eulerAngles(spline1.points.front().rotation) * spline1.points.front().scale,
-	//		glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-	//		glm::vec3(1.0f, 1.0f, 1.0f)
-	//	)
-	//);
-
-	//spline1.addPoint(
-	//	ew::Transform(glm::vec3(0.0f, 0.0f, 0.0f), 
-	//		glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
-	//		glm::vec3(1.0f, 1.0f, 1.0f))
-	//);
-
 	spline1.addPoint(
-		ew::Transform(glm::vec3(5.0f, 0.0f, 0.0f), 
+		ew::Transform(glm::vec3(3.0f, 0.0f, 0.0f), 
 		glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
 		glm::vec3(1.0f, 1.0f, 1.0f))
 	);
+
 
 	//spline1.addPoint(
 	//	ew::Transform(glm::vec3(10.0f, 3.0f, 0.0f), 
@@ -191,29 +180,30 @@ int main() {
 	//		glm::vec3(1.0f, 1.0f, 1.0f))
 	//);
 
-	jsc::Spline spline2(
-		ew::Shader("assets/unlit_line.vert", "assets/unlit_line.frag"),
-		ew::Shader("assets/unlit.vert", "assets/unlit.frag"),
-		"Spline 2"
-	);
+	//jsc::Spline spline2(
+	//	ew::Shader("assets/unlit_line.vert", "assets/unlit_line.frag"),
+	//	ew::Shader("assets/unlit.vert", "assets/unlit.frag"),
+	//	"Spline 2"
+	//);
 
-	spline2.clr = glm::vec3(1.0, 1.0, 0);
-	spline2.width = 1;
+	//spline2.clr = glm::vec3(1.0, 1.0, 0);
+	//spline2.width = 1;
+	//spline1.subdivs = 1;
 
-	spline2.addPoint(
-		ew::Transform(glm::vec3(-3.0f, 0.0f, 0.0f),
-			glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-			glm::vec3(1.0f, 1.0f, 1.0f))
-	);
+	//spline2.addPoint(
+	//	ew::Transform(glm::vec3(-3.0f, 0.0f, 0.0f),
+	//		glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+	//		glm::vec3(1.0f, 1.0f, 1.0f))
+	//);
 
-	spline2.addPoint(
-		ew::Transform(glm::vec3(-5.0f, 1.0f, 0.0f),
-			glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-			glm::vec3(1.0f, 1.0f, 1.0f))
-	);
+	//spline2.addPoint(
+	//	ew::Transform(glm::vec3(-5.0f, 1.0f, 0.0f),
+	//		glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+	//		glm::vec3(1.0f, 1.0f, 1.0f))
+	//);
 
 	objs.push_back(&spline1);
-	objs.push_back(&spline2);
+	//objs.push_back(&spline2);
 
 #pragma endregion
 
@@ -245,7 +235,10 @@ int main() {
 #pragma region Animation
 		//animator.playbackTime = 1; // Debug
 
-		//animator.update(deltaTime);
+		if (spline1.constantSpeed)
+			animator.clip->duration = spline1.arcLength;
+
+		animator.update(deltaTime);
 		
 		//monkeyTransform.position = spline1.getValue(animator.playbackTime).position + glm::eulerAngles(spline1.getValue(animator.playbackTime).rotation);
 		monkeyTransform.position = spline1.getValue(animator.playbackTime).position;
@@ -346,7 +339,7 @@ int main() {
 		// Splines
 		spline1.draw(camera);
 		spline1.debugDrawVelocity(camera, animator.playbackTime);
-		spline2.draw(camera);
+		//spline2.draw(camera);
 
 #pragma endregion
 
@@ -486,24 +479,6 @@ int main() {
 
 #pragma endregion
 
-#pragma region Gizmo
-		if (selected != nullptr) {
-			// Setup
-			ImGuizmo::SetOrthographic(false);
-			ImGuizmo::SetDrawlist();
-			ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, ImGui::GetWindowWidth(), ImGui::GetWindowHeight());
-
-			// Camera
-			glm::mat4 camProj = camera.projectionMatrix();
-			glm::mat4 camView = glm::inverse(camera.viewMatrix());
-
-			// Objet
-			glm::mat4 transform = selected->transform.modelMatrix();
-
-			ImGuizmo::Manipulate(glm::value_ptr(camView), glm::value_ptr(camProj), ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::LOCAL, glm::value_ptr(transform));
-		}
-
-#pragma endregion
 
 
 		glfwSwapBuffers(window);

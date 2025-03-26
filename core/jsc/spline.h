@@ -15,6 +15,10 @@
 
 namespace jsc {
 	typedef std::vector<ew::Transform> Points;
+	typedef float Distance;
+	typedef float T_Value;
+	typedef std::pair<Distance, T_Value> LUT_Type;
+	typedef std::vector<LUT_Type> LUT;
 
 	/// <summary>
 	/// Helper class for splines
@@ -36,20 +40,26 @@ namespace jsc {
 		Points points;
 		ControlPoints controlPoints;
 
+		// Settings
 		glm::vec3 clr = glm::vec3(.7, .2, .2);
 		float width = 5;
 		int subdivs = 10;
 
+		// Constant speed
+		bool constantSpeed = false;
+		float arcLength;
+		int arcLengthSamples = 10;
+		LUT lut;
+
+		// 
 		ew::Shader lineShader, pointShader;
 		ew::Mesh pointMesh, ctrlPointMesh;
+		GLuint VAO, VBO;
+		GLuint velVAO, velVBO;
 
 		// The points positions stored in 1 list. Easier to use when drawing
 		// will need to update the SetVertices and this to draw curved lines
 		std::vector<float> verts;
-
-		GLuint VAO, VBO;
-
-		GLuint velVAO, velVBO;
 
 
 		Spline(ew::Shader lineShader, ew::Shader pointShader, std::string newName) 
@@ -62,6 +72,9 @@ namespace jsc {
 		}
 
 		ew::Transform getValue(float t) {
+			if (constantSpeed)
+				t = lookupDistance(t);
+
 			ew::Transform value;
 			int index = 0;
 
@@ -90,6 +103,27 @@ namespace jsc {
 			return value;
 		}
 
+		float lookupDistance(Distance t) {
+			// Out of bounds: Extrapolate
+			if (t < 0 || t > lut.back().second)
+				return t / arcLength;
+
+			for (int i = 0; i < lut.size()-1; i++)
+			{
+				// Find largest value
+				if (t >= lut[i].first)
+					continue;
+
+				float lerpK = inverseLerp(lut[i-1].second, lut[i].second, t);
+
+				t = lerp(lut[i].second, lut[i-1].second, lerpK);
+
+				//t = remap(t, lut[i].second, lut[i+1].second, i / (lut.size() - 1.0f), (i + 1) / (lut.size() - 1.0f));
+				return t;
+			}
+
+		}
+
 		void addPoint(ew::Transform newPoint) {
 			points.push_back(newPoint);
 
@@ -114,6 +148,7 @@ namespace jsc {
 
 		void refresh() {
 			setVertices();
+			calcArcLength();
 			refreshControls();
 
 			glGenVertexArrays(1, &VAO);
@@ -200,6 +235,12 @@ namespace jsc {
 		// Will need to update this to work with multiple splines
 		void drawInspectorUI() {
 			ImGui::Text("Spline Info Here");
+			ImGui::Text(("Arc Length: " + std::to_string(arcLength)).c_str());
+
+			if (ImGui::DragInt("AL Samples", &arcLengthSamples, 1, 0, 100))
+				calcArcLength();
+
+			ImGui::Checkbox("Constant Speed", &constantSpeed);
 
 			ImGui::ColorEdit3("Spline CLr", &clr.x);
 			ImGui::DragFloat("Width", &width, .2, 0, 10);
@@ -278,6 +319,59 @@ namespace jsc {
 				verts.push_back(second.position.z);
 			}
 		}
+
+		void calcArcLength() {
+			int arcLengthIndex = 0;
+			arcLength = 0.0f;
+			std::vector<float> arcVerts;
+			lut.clear();
+
+			// Set Verts for spline segments
+			for (int i = 0; i < points.size() - 1; i++)
+			{
+				ew::Transform first = points[i], second = points[i + 1],
+					ctrl1 = controlPoints[i].transform, ctrl2 = controlPoints[i + 1].transform;
+
+				// First Vert
+				arcVerts.push_back(first.position.x);
+				arcVerts.push_back(first.position.y);
+				arcVerts.push_back(first.position.z);
+
+				lut.push_back(LUT_Type(arcLength, 0));
+
+				// Subdivisions
+				float lerpIncrement = 1 / (float)arcLengthSamples;
+				for (float lerpK = lerpIncrement; lerpK < 1; lerpK += lerpIncrement)
+				{
+					arcVerts.push_back(cubicBezier(first.position.x, ctrl1.position.x, ctrl2.position.x, second.position.x, lerpK));
+					arcVerts.push_back(cubicBezier(first.position.y, ctrl1.position.y, ctrl2.position.y, second.position.y, lerpK));
+					arcVerts.push_back(cubicBezier(first.position.z, ctrl1.position.z, ctrl2.position.z, second.position.z, lerpK));
+
+					arcLength += vertDist(arcVerts, arcLengthIndex);
+					arcLengthIndex++;
+
+					lut.push_back(LUT_Type(arcLength, lerpK));
+				}
+
+				// Last Vert
+				arcVerts.push_back(second.position.x);
+				arcVerts.push_back(second.position.y);
+				arcVerts.push_back(second.position.z);
+
+				arcLength += vertDist(arcVerts, arcLengthIndex);
+				lut.push_back(LUT_Type(arcLength, 1));
+			}
+		}
+
+		/// <returns>Distance between Vertices in the verts array</returns>
+		float vertDist(std::vector<float> verts, int startIndex) {
+			glm::vec3 start(verts[startIndex], verts[startIndex + 1], verts[startIndex + 2]);
+			glm::vec3 end(verts[startIndex + 3], verts[startIndex + 4], verts[startIndex + 5]);
+
+			float dist = glm::length(end - start); // Not .length
+
+			return dist;
+		};
 
 		void drawSplineTransformUI(ew::Transform& transform) {
 			//ImGui::Text((
