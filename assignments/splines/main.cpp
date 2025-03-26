@@ -8,6 +8,9 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <ew/shader.h>
 #include <ew/model.h>
 #include <ew/camera.h>
@@ -378,7 +381,7 @@ int main() {
 		//ImGui::End();
 
 		// Animator UI
-		ImGui::SetNextWindowPos({ screenWidth - guiWidth,0 });
+		ImGui::SetNextWindowPos({ screenWidth - guiWidth * 2,0 });
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Animation", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 
@@ -387,11 +390,12 @@ int main() {
 		ImGui::End();
 
 		// Spline UI. 
-		ImGui::SetNextWindowPos({ screenWidth - guiWidth * 2,0 });
+		ImGui::SetNextWindowPos({ screenWidth - guiWidth,0 });
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
-		ImGui::Begin("Spline 1", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
+		ImGui::Begin("Inspector", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 
-		spline1.drawInspectorUI();
+		if (selected != nullptr)
+			selected->drawInspectorUI();
 
 		ImGui::End();
 
@@ -423,7 +427,9 @@ int main() {
 
 		for each(jsc::Object * obj in objs)
 		{
-			obj->drawSceneUI();
+			if (ImGui::Button(("Select " + obj->name).c_str())) {
+				selected = obj;
+			}
 		}
 
 		if (ImGui::CollapsingHeader("Light & Shadow Settings"))
@@ -479,6 +485,26 @@ int main() {
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 #pragma endregion
+
+#pragma region Gizmo
+		if (selected != nullptr) {
+			// Setup
+			ImGuizmo::SetOrthographic(false);
+			ImGuizmo::SetDrawlist();
+			ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, ImGui::GetWindowWidth(), ImGui::GetWindowHeight());
+
+			// Camera
+			glm::mat4 camProj = camera.projectionMatrix();
+			glm::mat4 camView = glm::inverse(camera.viewMatrix());
+
+			// Objet
+			glm::mat4 transform = selected->transform.modelMatrix();
+
+			ImGuizmo::Manipulate(glm::value_ptr(camView), glm::value_ptr(camProj), ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::LOCAL, glm::value_ptr(transform));
+		}
+
+#pragma endregion
+
 
 		glfwSwapBuffers(window);
 	}

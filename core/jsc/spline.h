@@ -170,6 +170,11 @@ namespace jsc {
 				pointShader.setMat4("_Model", posMatrix);
 				pointMesh.draw();
 			}
+
+			// Center Point IG
+			pointShader.setMat4("_Model", transform.modelMatrix());
+			pointShader.setVec3("_Color", glm::vec3(0,1,1));
+			pointMesh.draw();
 		}
 
 		void debugDrawVelocity(ew::Camera cam, float t) {
@@ -194,40 +199,38 @@ namespace jsc {
 
 		// Will need to update this to work with multiple splines
 		void drawInspectorUI() {
-			if (ImGui::CollapsingHeader("A Spline")) {
-				ImGui::Text("Spline Info Here");
+			ImGui::Text("Spline Info Here");
 
-				ImGui::ColorEdit3("Spline CLr", &clr.x);
-				ImGui::DragFloat("Width", &width, .2, 0, 10);
-				if (ImGui::SliderInt("Subdivs", &subdivs, 1, 50)) {
-					refresh();
-				}
-
-				// Temp
-				int ID = 0;
-				for (ID = 0; ID < points.size(); ID++)
-				{
-					ImGui::PushID(ID);
-					ImGui::Indent();
-
-					drawSplineTransformUI(points[ID]);
-
-					ImGui::Dummy(ImVec2(0, 5));
-					ImGui::Unindent();
-					ImGui::PopID();
-				}
-
-				if (ImGui::Button("Add Point"))
-					addPoint(ew::Transform(
-						points.back().position + glm::vec3(1, 0, 0),
-						glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-						glm::vec3(1, 1, 1)
-					));
-
-				if (ImGui::Button("Remove Point"))
-					removeLastPoint();
-
+			ImGui::ColorEdit3("Spline CLr", &clr.x);
+			ImGui::DragFloat("Width", &width, .2, 0, 10);
+			if (ImGui::SliderInt("Subdivs", &subdivs, 1, 50)) {
+				refresh();
 			}
+
+			// Temp
+			int ID = 0;
+			for (ID = 0; ID < points.size(); ID++)
+			{
+				ImGui::PushID(ID);
+				ImGui::Indent();
+
+				drawSplineTransformUI(points[ID]);
+
+				ImGui::Dummy(ImVec2(0, 5));
+				ImGui::Unindent();
+				ImGui::PopID();
+			}
+
+			if (ImGui::Button("Add Point"))
+				addPoint(ew::Transform(
+					points.back().position + glm::vec3(1, 0, 0),
+					glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+					glm::vec3(1, 1, 1)
+				));
+
+			if (ImGui::Button("Remove Point"))
+				removeLastPoint();
+
 		}
 
 	private:
