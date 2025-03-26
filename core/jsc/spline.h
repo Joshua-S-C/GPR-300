@@ -10,6 +10,8 @@
 
 #include "../jsc/animation.h"
 
+#include "../jsc/object.h"
+
 
 namespace jsc {
 	typedef std::vector<ew::Transform> Points;
@@ -29,7 +31,7 @@ namespace jsc {
 	};
 	typedef std::vector<ControlPoint> ControlPoints;
 
-	struct Spline
+	struct Spline : public Object
 	{
 		Points points;
 		ControlPoints controlPoints;
@@ -50,11 +52,13 @@ namespace jsc {
 		GLuint velVAO, velVBO;
 
 
-		Spline(ew::Shader lineShader, ew::Shader pointShader) 
+		Spline(ew::Shader lineShader, ew::Shader pointShader, std::string newName) 
 			: lineShader(lineShader), pointShader(pointShader)
 		{
 			pointMesh = ew::Mesh(ew::createSphere(.1, 8));
 			ctrlPointMesh = ew::Mesh(ew::createSphere(.05, 8));
+
+			name = newName;
 		}
 
 		ew::Transform getValue(float t) {
@@ -183,11 +187,16 @@ namespace jsc {
 			return;
 		}
 
+		void drawSceneUI() {
+			ImGui::Text("This a splin");
+			ImGui::Text(name.c_str());
+		}
+
 		// Will need to update this to work with multiple splines
-		void showUI() {
+		void drawInspectorUI() {
 			if (ImGui::CollapsingHeader("A Spline")) {
 				ImGui::Text("Spline Info Here");
-				
+
 				ImGui::ColorEdit3("Spline CLr", &clr.x);
 				ImGui::DragFloat("Width", &width, .2, 0, 10);
 				if (ImGui::SliderInt("Subdivs", &subdivs, 1, 50)) {
@@ -210,9 +219,9 @@ namespace jsc {
 
 				if (ImGui::Button("Add Point"))
 					addPoint(ew::Transform(
-						points.back().position + glm::vec3(1,0,0),
+						points.back().position + glm::vec3(1, 0, 0),
 						glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-						glm::vec3(1,1,1)
+						glm::vec3(1, 1, 1)
 					));
 
 				if (ImGui::Button("Remove Point"))
@@ -293,5 +302,6 @@ namespace jsc {
 				refresh();
 			}
 		}
-	};
+
+};
 }

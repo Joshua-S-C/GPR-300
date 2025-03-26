@@ -150,7 +150,8 @@ int main() {
 	// Splines
 	jsc::Spline spline1(
 		ew::Shader("assets/unlit_line.vert", "assets/unlit_line.frag"), 
-		ew::Shader("assets/unlit.vert", "assets/unlit.frag")
+		ew::Shader("assets/unlit.vert", "assets/unlit.frag"),
+		"Spline 1"
 	);
 
 	spline1.addPoint(
@@ -186,7 +187,8 @@ int main() {
 
 	jsc::Spline spline2(
 		ew::Shader("assets/unlit_line.vert", "assets/unlit_line.frag"),
-		ew::Shader("assets/unlit.vert", "assets/unlit.frag")
+		ew::Shader("assets/unlit.vert", "assets/unlit.frag"),
+		"Spline 2"
 	);
 
 	spline2.clr = glm::vec3(1.0, 1.0, 0);
