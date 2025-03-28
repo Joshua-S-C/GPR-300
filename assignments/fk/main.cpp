@@ -140,21 +140,6 @@ int main() {
 	const GLuint shadowWidth = 2048, shadowHeight = 2048;
 	jsc::Framebuffer shadowFB = jsc::Framebuffer::createFramebufferDepth(shadowWidth, shadowHeight);
 
-	// Animation
-	//jsc::Animator animator;
-
-	//animator.clip = new jsc::AnimationClip();
-	//animator.clip->duration = 2;
-
-	//animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0, 0, 0)));
-	//animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0, 2, 0)));
-
-	//animator.clip->scaleKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(1, 1, 1)));
-	//animator.clip->scaleKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(2, 2, 2)));
-
-	//animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0, 0, 0)));
-	//animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0, 3, 0)));
-
 #pragma region FK
 	jsc::Skeleton skel;
 	skel.name = "Skel";
@@ -211,7 +196,6 @@ int main() {
 
 	//std::vector<jsc::Object*> skelKids = skel.getAllChildren();
 	//objsToCheckSelected = skel.getAllChildren();
-
 	//objs.insert(objs.end(), skelKids.begin(), skelKids.end());
 #pragma endregion
 
@@ -267,11 +251,13 @@ int main() {
 		depthShader.use();
 		depthShader.setMat4("_LightSpaceMatrix", lightSpaceMatrix);
 
-		depthShader.setMat4("_Model", monkeyTransform.modelMatrix());
-		monkeyModel.draw();
-
 		// Dont forget to draw scene here too
 		// TODO Actually make a function for it
+		for each(jsc::Joint * joint in skel.joints)
+		{
+			depthShader.setMat4("_Model", joint->globalTransform);
+			monkeyModel.draw();
+		}
 
 		depthShader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
@@ -355,16 +341,16 @@ int main() {
 		//postProcessor.drawUIWindow();
 		//postProcessor.drawDebugUIWindow();
 
-		// Shadow Map UI
-		//ImGui::SetNextWindowPos({ screenWidth - guiWidth * 2,0 });
-		//ImGui::SetNextWindowSize({ guiWidth, guiWidth });
-		//ImGui::Begin("Shadow Map", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
+		//Shadow Map UI
+		ImGui::SetNextWindowPos({ screenWidth - guiWidth * 2,20 });
+		ImGui::SetNextWindowSize({ guiWidth, guiWidth });
+		ImGui::Begin("Shadow Map", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 
-		//float ratio = guiWidth / shadowWidth;
-		//ImVec2 imageDrawSize = ImVec2(shadowWidth * ratio, shadowHeight * ratio);
-		//ImGui::Image((ImTextureID)shadowFB.depthBuffer, imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
-		//
-		//ImGui::End();
+		float ratio = guiWidth / shadowWidth;
+		ImVec2 imageDrawSize = ImVec2(shadowWidth * ratio, shadowHeight * ratio);
+		ImGui::Image((ImTextureID)shadowFB.depthBuffer, imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
+		
+		ImGui::End();
 
 		// Animator UI
 		ImGui::SetNextWindowPos({ screenWidth - guiWidth * 2,0 });
