@@ -132,7 +132,7 @@ namespace jsc {
 	struct Animator {
 		AnimationClip* clip;
 
-		bool isPlaying = true;
+		bool isPlaying = false;
 		bool isLooping = true;
 		bool infinity = true;
 
@@ -191,7 +191,29 @@ namespace jsc {
 				prevKey = &collection.back();
 
 				// Value to lerp to
-				float t = inverseLerp(prevKey->time, nextKey->time, 1 - (playbackTime - clip->duration));
+				float t = inverseLerp(prevKey->time, nextKey->time, (playbackTime - clip->duration));
+
+				if (t > 1 && t < 2) {
+					t--;
+
+					printf(std::to_string(t).c_str());
+					printf("\n");
+
+					t = ease(t, AllEasingFuncs[prevKey->easeType]);
+					return lerp(prevKey->value, nextKey->value, t);
+				}
+
+				// Remap into [0-1] range. 
+				// Then count how many times its looped basically
+				bool isEven = true;
+				while (t > 1) {
+					t -= 1;
+					isEven = !isEven;
+				}
+
+				if (isEven) 
+					t = 1 - t;
+
 				t = ease(t, AllEasingFuncs[prevKey->easeType]);
 				return lerp(prevKey->value, nextKey->value, t);
 			}

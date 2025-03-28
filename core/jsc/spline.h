@@ -15,6 +15,10 @@
 
 namespace jsc {
 	typedef std::vector<ew::Transform> Points;
+	typedef float Distance;
+	typedef float T_Value;
+	typedef std::pair<Distance, T_Value> LUT_Type;
+	typedef std::vector<LUT_Type> LUT;
 
 	/// <summary>
 	/// Helper class for splines
@@ -36,20 +40,26 @@ namespace jsc {
 		Points points;
 		ControlPoints controlPoints;
 
+		// Settings
 		glm::vec3 clr = glm::vec3(.7, .2, .2);
 		float width = 5;
-		int subdivs = 10;
+		int subdivs = 50;
 
+		// Constant speed
+		bool constantSpeed = true;
+		float arcLength;
+		int arcLengthSamples = 10;
+		LUT lut;
+
+		// 
 		ew::Shader lineShader, pointShader;
 		ew::Mesh pointMesh, ctrlPointMesh;
+		GLuint VAO, VBO;
+		GLuint velVAO, velVBO;
 
 		// The points positions stored in 1 list. Easier to use when drawing
 		// will need to update the SetVertices and this to draw curved lines
 		std::vector<float> verts;
-
-		GLuint VAO, VBO;
-
-		GLuint velVAO, velVBO;
 
 
 		Spline(ew::Shader lineShader, ew::Shader pointShader, std::string newName) 
@@ -62,9 +72,14 @@ namespace jsc {
 		}
 
 		ew::Transform getValue(float t) {
+			if (constantSpeed)
+				t = lookupDistance(t);
+
 			ew::Transform value;
 			int index = 0;
 
+			// Go to proper point index. 
+			// Essentially remaps t to (0-1) and which pair of splines to apply that to
 			while (t > 1) {
 				t--;
 				index++;
@@ -88,6 +103,31 @@ namespace jsc {
 			);
 
 			return value;
+		}
+
+		float lookupDistance(Distance t) {
+			// Out of bounds: Extrapolate
+			if (t < 0 || t >= lut.back().first)
+				return t / arcLength;
+
+			for (int i = 0; i < lut.size()-1; i++)
+			{
+				// Find largest value
+				if (t > lut[i+1].first)
+					continue;
+
+
+				return lut[i].second;
+				
+				float lerpK = inverseLerp(lut[i].second, lut[i+1].second, t);
+				t = lerp(lut[i].second, lut[i+1].second, lerpK);
+
+				// this remapping is doing nothing if t < 1
+				//t = remap(t, lut[i].second, lut[i+1].second, i / (lut.size() - 1.0f), (i + 1.0f) / (lut.size() - 1.0f));
+
+				return t;
+			}
+
 		}
 
 		void addPoint(ew::Transform newPoint) {
@@ -114,6 +154,7 @@ namespace jsc {
 
 		void refresh() {
 			setVertices();
+			calcArcLength();
 			refreshControls();
 
 			glGenVertexArrays(1, &VAO);
@@ -171,10 +212,10 @@ namespace jsc {
 				pointMesh.draw();
 			}
 
-			// Center Point IG
-			pointShader.setMat4("_Model", transform.modelMatrix());
-			pointShader.setVec3("_Color", glm::vec3(0,1,1));
-			pointMesh.draw();
+			// Center Point just cuz
+			//pointShader.setMat4("_Model", transform.modelMatrix());
+			//pointShader.setVec3("_Color", glm::vec3(0,1,1));
+			//pointMesh.draw();
 		}
 
 		void debugDrawVelocity(ew::Camera cam, float t) {
@@ -193,13 +234,19 @@ namespace jsc {
 		}
 
 		void drawSceneUI() {
-			ImGui::Text("This a splin");
+			ImGui::Text("This a splin3");
 			ImGui::Text(name.c_str());
 		}
 
-		// Will need to update this to work with multiple splines
 		void drawInspectorUI() {
 			ImGui::Text("Spline Info Here");
+			ImGui::Text(("Arc Length: " + std::to_string(arcLength)).c_str());
+
+			if (ImGui::DragInt("AL Samples", &arcLengthSamples, 1, 0, 100)) {
+				refresh();
+			}
+
+			ImGui::Checkbox("Constant Speed", &constantSpeed);
 
 			ImGui::ColorEdit3("Spline CLr", &clr.x);
 			ImGui::DragFloat("Width", &width, .2, 0, 10);
@@ -208,6 +255,8 @@ namespace jsc {
 			}
 
 			// Temp
+			ImGui::Text("Splines");
+
 			int ID = 0;
 			for (ID = 0; ID < points.size(); ID++)
 			{
@@ -230,6 +279,28 @@ namespace jsc {
 
 			if (ImGui::Button("Remove Point"))
 				removeLastPoint();
+
+			// Temp also
+
+			ImGui::Columns(2);
+			ImGui::Text("Dist");
+			ImGui::NextColumn();
+			ImGui::Text("T");
+			ImGui::NextColumn();
+
+			for each (LUT_Type val in lut)
+			{
+
+				ImGui::Dummy(ImVec2(0, 5));
+				ImGui::NextColumn();
+				ImGui::Dummy(ImVec2(0, 5));
+				ImGui::NextColumn();
+
+				ImGui::Text(std::to_string(val.first).c_str());
+				ImGui::NextColumn();
+				ImGui::Text(std::to_string(val.second).c_str());
+				ImGui::NextColumn();
+			}
 
 		}
 
@@ -278,6 +349,63 @@ namespace jsc {
 				verts.push_back(second.position.z);
 			}
 		}
+
+		/// <summary>
+		/// Updates ArcLength and LUT vars
+		/// </summary>
+		void calcArcLength() {
+			int arcLengthIndex = 0;
+			arcLength = 0.0f;
+			std::vector<float> arcVerts;
+			lut.clear();
+			lut.push_back(LUT_Type(arcLength, 0));
+
+			// Set Verts for spline segments
+			for (int i = 0; i < points.size() - 1; i++)
+			{
+				ew::Transform first = points[i], second = points[i + 1],
+					ctrl1 = controlPoints[i].transform, ctrl2 = controlPoints[i + 1].transform;
+
+				// First Vert
+				arcVerts.push_back(first.position.x);
+				arcVerts.push_back(first.position.y);
+				arcVerts.push_back(first.position.z);
+
+				// Subdivisions
+				float lerpIncrement = 1 / (float)arcLengthSamples;
+				for (float lerpK = lerpIncrement; lerpK < 1; lerpK += lerpIncrement)
+				{
+					arcVerts.push_back(cubicBezier(first.position.x, ctrl1.position.x, ctrl2.position.x, second.position.x, lerpK));
+					arcVerts.push_back(cubicBezier(first.position.y, ctrl1.position.y, ctrl2.position.y, second.position.y, lerpK));
+					arcVerts.push_back(cubicBezier(first.position.z, ctrl1.position.z, ctrl2.position.z, second.position.z, lerpK));
+
+					arcLength += vertDist(arcVerts, arcLengthIndex);
+					arcLengthIndex++;
+
+					lut.push_back(LUT_Type(arcLength, i + lerpK));
+				}
+
+				// Last Vert
+				arcVerts.push_back(second.position.x);
+				arcVerts.push_back(second.position.y);
+				arcVerts.push_back(second.position.z);
+
+				arcLength += vertDist(arcVerts, arcLengthIndex);
+				lut.push_back(LUT_Type(arcLength, i+1));
+			}
+
+			// IDK
+		}
+
+		/// <returns>Distance between Vertices in the verts array</returns>
+		float vertDist(std::vector<float> verts, int startIndex) {
+			glm::vec3 start(verts[startIndex], verts[startIndex + 1], verts[startIndex + 2]);
+			glm::vec3 end(verts[startIndex + 3], verts[startIndex + 4], verts[startIndex + 5]);
+
+			float dist = glm::length(end - start); // Not .length
+
+			return dist;
+		};
 
 		void drawSplineTransformUI(ew::Transform& transform) {
 			//ImGui::Text((

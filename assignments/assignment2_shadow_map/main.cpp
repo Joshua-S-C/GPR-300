@@ -84,6 +84,7 @@ int main() {
 	camera.aspectRatio = (float)screenWidth / screenHeight;
 	camera.fov = 60.0f;
 
+	// Shadow Cam Setup
 	float minShadowBias = 0.005, maxShadowBias = 0.05;
  	float shadowCamDistance = 3;
 	shadowCamera.target = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -113,17 +114,14 @@ int main() {
 
 	// Post Processing
 	jsc::PostProcessEffect* tintShader = new jsc::TintShader(ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/tint.frag"), 1);
-	//jsc::PostProcessEffect* negativeShader = new jsc::NegativeShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/negative.frag"), 2);
-	//jsc::PostProcessEffect* blurShader = new jsc::BoxBlurShader( ew::Shader("assets/post_processing_effects/screen.vert", "assets/post_processing_effects/boxBlur.frag"), 2);
 
 	EffectsList effects;
 	effects.push_back(tintShader);
-	//effects.push_back(negativeShader);
-	//effects.push_back(blurShader);
 
 	jsc::PostProcessor postProcessor(effects, screenWidth, screenHeight);
 	postProcessor.updateTextureIndex(0);
 
+	// Shadows
 	const GLuint shadowWidth = 2048, shadowHeight = 2048;
 	jsc::Framebuffer shadowFB = jsc::Framebuffer::createFramebufferDepth(shadowWidth, shadowHeight);
 
@@ -244,18 +242,6 @@ int main() {
 		postProcessor.drawUIWindow();
 		//postProcessor.drawDebugUIWindow();
 
-		// Shadow Map UI
-		ImGui::SetNextWindowPos({ screenWidth - guiWidth,0 });
-		ImGui::SetNextWindowSize({ guiWidth, guiWidth });
-		ImGui::Begin("Shadow Map", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
-
-		float ratio = guiWidth / shadowWidth;
-		ImVec2 imageDrawSize = ImVec2(shadowWidth * ratio, shadowHeight * ratio);
-		ImGui::Image((ImTextureID)shadowFB.depthBuffer, imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
-		
-		ImGui::End();
-
-
 		ImGui::SetNextWindowPos({ 0,0 });
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Settings", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
@@ -280,6 +266,10 @@ int main() {
 		if (ImGui::CollapsingHeader("Light & Shadow Settings"))
 		{
 			ImGui::Indent();
+
+			float ratio = guiWidth / shadowWidth;
+			ImVec2 imageDrawSize = ImVec2(shadowWidth * ratio, shadowHeight * ratio);
+			ImGui::Image((ImTextureID)shadowFB.depthBuffer, imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
 
 			if (ImGui::Button("Reset Camera"))
 				resetCamera(&camera, &cameraController);

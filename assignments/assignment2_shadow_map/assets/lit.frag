@@ -156,18 +156,7 @@ void main() {
 	// Shadow
 	float shadow = calcShadow(fs_in.FragPosLightSpace, calcShadowBias(normal, lightDir));
 
-	// Combine Lighting
-	//vec3 lightColor = 
-	//	((diffuse + specular) * _Light.clr) +
-	//	(ambientClr + (-shadow));
-
-	//ambientClr += -shadow;
-	//diffuse += -shadow;
-	//specular += -shadow;
-
 	vec3 lightColor = ((diffuse +  specular) * _Light.clr) * shadow + ambientClr;
-	//lightColor = lightColor * (1.0 - shadow);
-
 	vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
 
 	FragColor = vec4(objectColor * lightColor,1.0);
