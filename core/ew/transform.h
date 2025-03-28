@@ -30,9 +30,17 @@ namespace ew {
 			return m;
 		}
 
+		glm::mat4 modelMatrixEuler() const {
+			glm::mat4 m = glm::mat4(1.0f);
+			m = glm::translate(m, position);
+			m *= glm::mat4_cast(glm::quat(eulerRot));
+			m = glm::scale(m, scale);
+			return m;
+		}
+
 		void drawInspectorUI() {
 			ImGui::DragFloat3("Position", &position.x, .05f, -10.0f, 10.0f);
-			ImGui::DragFloat4("Rotation", &rotation.x, .05f, -10.0f, 10.0f);
+			//ImGui::DragFloat4("Rotation", &rotation.x, .05f, -10.0f, 10.0f);
 			ImGui::DragFloat3("E Rotation", &eulerRot.x, .05f, -10.0f, 10.0f);
 			ImGui::DragFloat3("Scale", &scale.x, .05f, -10.0f, 10.0f);
 		}

@@ -5,6 +5,7 @@ namespace jsc {
 
 	/// <summary>
 	/// Joint and Skeleton represent the hierarchy structure, but do not hold poses directly. 
+	/// tbh Im really want to just move all this to object and make it the default behavior. so you can parent an objects
 	/// </summary>
 	struct Joint : public Object {
 		Joint* parent = nullptr;
@@ -39,7 +40,7 @@ namespace jsc {
 		}
 
 		void solveFK() {
-			localTransform = transform.modelMatrix();
+			localTransform = transform.modelMatrixEuler();
 
 			if (this->parent == nullptr)
 				globalTransform = localTransform;
@@ -93,9 +94,15 @@ namespace jsc {
 	struct Skeleton : public Object {
 		std::vector<Joint*> joints;
 
+		/// <summary>
+		/// Properly sets all Joint transforms
+		/// </summary>
 		void solveFK() {
 			for each(Joint* joint in joints)
 			{
+				//if (joint->parent == nullptr)
+				//	continue;
+
 				if (joint->children.empty())
 					joint->globalTransform = joint->localTransform;
 				else
@@ -128,7 +135,8 @@ namespace jsc {
 					clicked = true;
 
 				for each(Joint* j in joints)
-					j->drawSceneUI();
+					if (j->parent == nullptr) // Prevents UI duplication lol
+						j->drawSceneUI();
 
 				ImGui::TreePop(); 
 			}

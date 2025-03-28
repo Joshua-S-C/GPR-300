@@ -172,7 +172,6 @@ int main() {
 	j4->transform.position = glm::vec3(-1.0f, 0.0f, 0.0f);
 	j4->transform.scale = glm::vec3(0.5f, 0.5f, 0.5f);
 
-
 	jsc::Joint* j5 = new jsc::Joint("Elbow_R");
 	j5->transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
 	j5->transform.scale = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -181,15 +180,29 @@ int main() {
 	j6->transform.position = glm::vec3(3.0f, 0.0f, 0.0f);
 	j6->transform.scale = glm::vec3(0.5f, 0.5f, 0.5f);
 
+	jsc::Joint* j7 = new jsc::Joint("Elbow_L");
+	j7->transform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
+	j7->transform.scale = glm::vec3(0.5f, 0.5f, 0.5f);
+
+	jsc::Joint* j8 = new jsc::Joint("Wrist_L");
+	j8->transform.position = glm::vec3(-3.0f, 0.0f, 0.0f);
+	j8->transform.scale = glm::vec3(0.5f, 0.5f, 0.5f);
 
 	j2->setParent(j1);
 	j3->setParent(j1);
 	j4->setParent(j1);
 	j5->setParent(j3);
 	j6->setParent(j5);
+	j7->setParent(j4);
+	j8->setParent(j7);
 
 	skel.joints.push_back(j1);
 	//skel.joints.push_back(j2);
+	//skel.joints.push_back(j3);
+	//skel.joints.push_back(j4);
+	//skel.joints.push_back(j5);
+	//skel.joints.push_back(j6);
+	//skel.joints.push_back(j7);
 
 	objs.push_back(&skel);
 
@@ -304,16 +317,11 @@ int main() {
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		shader.setMat4("_LightSpaceMatrix", lightSpaceMatrix);
 
-		//shader.setMat4("_Model", monkeyTransform.modelMatrix());
-		//monkeyModel.draw();
 
-		//shader.setMat4("_Model", j1->transform.modelMatrix());
-		//monkeyModel.draw();
-
+		// TODO Move this into UI checks
 		skel.solveFK();
 		for each(jsc::Joint* joint in objsToCheckSelected)
 		{
-			//shader.setMat4("_Model", joint->transform.modelMatrix());
 			shader.setMat4("_Model", joint->globalTransform);
 			monkeyModel.draw();
 		}
@@ -422,7 +430,7 @@ int main() {
 
 			if (ImGui::CollapsingHeader("Transforms")) {
 				//drawTransformUI(j1->transform);
-				//drawTransformUI(planeTransform);
+				drawTransformUI(planeTransform);
 			}
 
 			ImGui::Unindent();
