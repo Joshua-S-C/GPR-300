@@ -141,19 +141,19 @@ int main() {
 	jsc::Framebuffer shadowFB = jsc::Framebuffer::createFramebufferDepth(shadowWidth, shadowHeight);
 
 	// Animation
-	jsc::Animator animator;
+	//jsc::Animator animator;
 
-	animator.clip = new jsc::AnimationClip();
-	animator.clip->duration = 2;
+	//animator.clip = new jsc::AnimationClip();
+	//animator.clip->duration = 2;
 
-	animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0, 0, 0)));
-	animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0, 2, 0)));
+	//animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0, 0, 0)));
+	//animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0, 2, 0)));
 
-	animator.clip->scaleKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(1, 1, 1)));
-	animator.clip->scaleKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(2, 2, 2)));
+	//animator.clip->scaleKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(1, 1, 1)));
+	//animator.clip->scaleKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(2, 2, 2)));
 
-	animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0, 0, 0)));
-	animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0, 3, 0)));
+	//animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0, 0, 0)));
+	//animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0, 3, 0)));
 
 #pragma region FK
 	jsc::Skeleton skel;
@@ -161,10 +161,26 @@ int main() {
 
 	jsc::Joint* j1 = new jsc::Joint("Torso");
 	jsc::Joint* j2 = new jsc::Joint("Head");
+	j2->transform.position = glm::vec3(0.0f, 1.5f, 0.0f);
+	j2->transform.scale = glm::vec3(0.5f, 0.5f, 0.5f);
+
 	jsc::Joint* j3 = new jsc::Joint("Shoulder_R");
+	j3->transform.position = glm::vec3(1.0f, 0.0f, 0.0f);
+	j3->transform.scale = glm::vec3(0.5f, 0.5f, 0.5f);
+
 	jsc::Joint* j4 = new jsc::Joint("Shoulder_L");
+	j4->transform.position = glm::vec3(-1.0f, 0.0f, 0.0f);
+	j4->transform.scale = glm::vec3(0.5f, 0.5f, 0.5f);
+
+
 	jsc::Joint* j5 = new jsc::Joint("Elbow_R");
+	j5->transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
+	j5->transform.scale = glm::vec3(0.5f, 0.5f, 0.5f);
+
 	jsc::Joint* j6 = new jsc::Joint("Wrist_R");
+	j6->transform.position = glm::vec3(3.0f, 0.0f, 0.0f);
+	j6->transform.scale = glm::vec3(0.5f, 0.5f, 0.5f);
+
 
 	j2->setParent(j1);
 	j3->setParent(j1);
@@ -288,20 +304,22 @@ int main() {
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		shader.setMat4("_LightSpaceMatrix", lightSpaceMatrix);
 
-		shader.setMat4("_Model", monkeyTransform.modelMatrix());
-		monkeyModel.draw();
+		//shader.setMat4("_Model", monkeyTransform.modelMatrix());
+		//monkeyModel.draw();
 
-		shader.setMat4("_Model", j1->transform.modelMatrix());
-		monkeyModel.draw();
+		//shader.setMat4("_Model", j1->transform.modelMatrix());
+		//monkeyModel.draw();
 
-		//for each(jsc::Object* joint in objsToCheckSelected)
-		//{
-		//	shader.setMat4("_Model", joint->transform.modelMatrix());
-		//	monkeyModel.draw();
-		//}
+		skel.solveFK();
+		for each(jsc::Joint* joint in objsToCheckSelected)
+		{
+			//shader.setMat4("_Model", joint->transform.modelMatrix());
+			shader.setMat4("_Model", joint->globalTransform);
+			monkeyModel.draw();
+		}
 
 		shader.setMat4("_Model", planeTransform.modelMatrix());
-		planeMesh.draw();
+		planeMesh.draw(); 
 
 
 #pragma endregion
@@ -342,7 +360,7 @@ int main() {
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Animation", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 
-		animator.showUI();
+		//animator.showUI();
 
 		ImGui::End();
 
@@ -402,8 +420,9 @@ int main() {
 
 			material.drawUI();
 
-			if (ImGui::CollapsingHeader("Plane Transform")) {
-				drawTransformUI(planeTransform);
+			if (ImGui::CollapsingHeader("Transforms")) {
+				//drawTransformUI(j1->transform);
+				//drawTransformUI(planeTransform);
 			}
 
 			ImGui::Unindent();
@@ -429,8 +448,6 @@ int main() {
 				obj->unClick();
 			}
 		}
-
-		drawTransformUI(monkeyTransform);
 
 		ImGui::End();
 

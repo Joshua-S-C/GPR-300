@@ -9,10 +9,8 @@ namespace jsc {
 	struct Joint : public Object {
 		Joint* parent = nullptr;
 		std::vector<Joint*> children;
-		ew::Transform ew_localTransform;
 
 		glm::mat4 localTransform, globalTransform;
-
 
 		Joint() = default;
 		Joint(std::string name) {
@@ -41,6 +39,8 @@ namespace jsc {
 		}
 
 		void solveFK() {
+			localTransform = transform.modelMatrix();
+
 			if (this->parent == nullptr)
 				globalTransform = localTransform;
 			else
@@ -86,7 +86,7 @@ namespace jsc {
 
 		void drawInspectorUI() {
 			ImGui::Text(("Joint : " + name).c_str());
-			ew_localTransform.drawInspectorUI();
+			transform.drawInspectorUI();
 		};
 	};
 
