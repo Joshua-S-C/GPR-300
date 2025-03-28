@@ -46,9 +46,9 @@ namespace jsc {
 				globalTransform = localTransform;
 			else
 				this->globalTransform = parent->globalTransform * localTransform;
-				for each(Joint* child in children)
-					child->solveFK();
-
+			
+			for each(Joint* child in children)
+				child->solveFK();
 		}
 
 		/// <summary>
