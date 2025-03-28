@@ -35,7 +35,7 @@ namespace jsc {
 			ImGui::Text(name.c_str());
 		};
 
-		virtual void drawInspectorUI() = 0;
+		virtual bool drawInspectorUI() = 0;
 
 	};
 

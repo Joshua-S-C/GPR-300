@@ -197,17 +197,20 @@ int main() {
 	j8->setParent(j7);
 
 	skel.joints.push_back(j1);
-	//skel.joints.push_back(j2);
-	//skel.joints.push_back(j3);
-	//skel.joints.push_back(j4);
-	//skel.joints.push_back(j5);
-	//skel.joints.push_back(j6);
-	//skel.joints.push_back(j7);
+	skel.joints.push_back(j2);
+	skel.joints.push_back(j3);
+	skel.joints.push_back(j4);
+	skel.joints.push_back(j5);
+	skel.joints.push_back(j6);
+	skel.joints.push_back(j7);
+	skel.joints.push_back(j8);
+
+	skel.solveFK();
 
 	objs.push_back(&skel);
 
 	//std::vector<jsc::Object*> skelKids = skel.getAllChildren();
-	objsToCheckSelected = skel.getAllChildren();
+	//objsToCheckSelected = skel.getAllChildren();
 
 	//objs.insert(objs.end(), skelKids.begin(), skelKids.end());
 #pragma endregion
@@ -237,7 +240,7 @@ int main() {
 		glClearColor(settings.clearClr.x, settings.clearClr.y, settings.clearClr.z, settings.clearClr.w);
 
 		// Animation ------------------------------------------------------------*/
-#pragma region Skel
+#pragma region Skel Animation
 		
 
 #pragma endregion
@@ -319,8 +322,8 @@ int main() {
 
 
 		// TODO Move this into UI checks
-		skel.solveFK();
-		for each(jsc::Joint* joint in objsToCheckSelected)
+		//skel.solveFK();
+		for each(jsc::Joint* joint in skel.joints)
 		{
 			shader.setMat4("_Model", joint->globalTransform);
 			monkeyModel.draw();
@@ -449,7 +452,7 @@ int main() {
 		}
 
 		// This is temporary to select joints before I move parent stuff to object
-		for each(jsc::Object * obj in objsToCheckSelected)
+		for each(jsc::Object * obj in skel.joints)
 		{
 			if (obj->clicked) {
 				selected = obj;

@@ -38,11 +38,16 @@ namespace ew {
 			return m;
 		}
 
-		void drawInspectorUI() {
-			ImGui::DragFloat3("Position", &position.x, .05f, -10.0f, 10.0f);
-			//ImGui::DragFloat4("Rotation", &rotation.x, .05f, -10.0f, 10.0f);
-			ImGui::DragFloat3("E Rotation", &eulerRot.x, .05f, -10.0f, 10.0f);
-			ImGui::DragFloat3("Scale", &scale.x, .05f, -10.0f, 10.0f);
+		/// <returns>True if UI changed</returns>
+		bool drawInspectorUI() {
+			// I did this so it finishes drawing the whole UI
+			
+			bool update1 = ImGui::DragFloat3("Position", &position.x, .05f, -10.0f, 10.0f);
+			//ImGui::DragFloat4("Rotation", &rotation.x, .05f, -10.0f, 10.0f) ||
+			bool update2 = ImGui::DragFloat3("E Rotation", &eulerRot.x, .05f, -10.0f, 10.0f);
+			bool update3 = ImGui::DragFloat3("Scale", &scale.x, .05f, -10.0f, 10.0f);
+			
+			return update1 || update2 || update3;
 		}
 	};
 }

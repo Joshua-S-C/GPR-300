@@ -85,9 +85,16 @@ namespace jsc {
 			}
 		};
 
-		void drawInspectorUI() {
+		bool drawInspectorUI() {
 			ImGui::Text(("Joint : " + name).c_str());
-			transform.drawInspectorUI();
+
+			// Recalc FK on UI
+			bool update = transform.drawInspectorUI();
+
+			if (update)
+				solveFK();
+
+			return update;
 		};
 	};
 
@@ -100,8 +107,8 @@ namespace jsc {
 		void solveFK() {
 			for each(Joint* joint in joints)
 			{
-				//if (joint->parent == nullptr)
-				//	continue;
+				if (joint->parent != nullptr)
+					continue;
 
 				if (joint->children.empty())
 					joint->globalTransform = joint->localTransform;
@@ -142,17 +149,18 @@ namespace jsc {
 			}
 		};
 
-		void drawInspectorUI() {
+		bool drawInspectorUI() {
 			ImGui::Text(("Skeleton : " + name).c_str());
+			return false;
 		};
 	};
 
 	/// <summary>
-	/// Represents the local transformation of a single joint
+	/// Represents the local transformation of a single joint. Used for animations
 	/// Contains a transform
 	/// </summary>
 	struct JointPose : public Object {
-		void drawInspectorUI() {
+		bool drawInspectorUI() {
 
 		};
 	};
@@ -165,7 +173,7 @@ namespace jsc {
 		std::vector<JointPose*> localPoses;
 		glm::mat4x4* globalPose; //Global joint poses. This is what is calculated using FK!
 
-		void drawInspectorUI() {
+		bool drawInspectorUI() {
 			
 		};
 

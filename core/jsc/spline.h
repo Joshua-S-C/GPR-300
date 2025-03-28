@@ -238,7 +238,7 @@ namespace jsc {
 			ImGui::Text(name.c_str());
 		}
 
-		void drawInspectorUI() {
+		bool drawInspectorUI() {
 			ImGui::Text("Spline Info Here");
 			ImGui::Text(("Arc Length: " + std::to_string(arcLength)).c_str());
 
@@ -302,6 +302,7 @@ namespace jsc {
 				ImGui::NextColumn();
 			}
 
+			return true;
 		}
 
 	private:
