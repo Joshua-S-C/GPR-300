@@ -486,24 +486,6 @@ int main() {
 
 #pragma endregion
 
-#pragma region Gizmo
-		if (selected != nullptr) {
-			// Setup
-			ImGuizmo::SetOrthographic(false);
-			ImGuizmo::SetDrawlist();
-			ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, ImGui::GetWindowWidth(), ImGui::GetWindowHeight());
-
-			// Camera
-			glm::mat4 camProj = camera.projectionMatrix();
-			glm::mat4 camView = glm::inverse(camera.viewMatrix());
-
-			// Objet
-			glm::mat4 transform = selected->transform.modelMatrix();
-
-			ImGuizmo::Manipulate(glm::value_ptr(camView), glm::value_ptr(camProj), ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::LOCAL, glm::value_ptr(transform));
-		}
-
-#pragma endregion
 
 
 		glfwSwapBuffers(window);

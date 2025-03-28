@@ -8,6 +8,9 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <ew/shader.h>
 #include <ew/model.h>
 #include <ew/camera.h>
@@ -20,18 +23,20 @@
 #include <jsc/postProcessor.h>
 #include <jsc/framebuffer.h>
 #include <jsc/spline.h>
+#include <jsc/kinematics.h>
 
 // hey
 #include "../ImGuizmo.h"
 
 typedef std::vector<jsc::PostProcessEffect*> EffectsList;
 typedef std::vector<jsc::KeyFrame<glm::vec3>> KeysVec3;
+typedef std::vector<jsc::Object*> Objects;
 
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
 void drawUI();
-void drawTransformUI(ew::Transform &transform);
+void drawTransformUI(ew::Transform& transform);
 void resetCamera(ew::Camera* camera, ew::CameraController* controller);
 
 //Global state
@@ -66,23 +71,28 @@ struct AppSettings {
 		World_Normals = 1,
 		Normal_Map = 2
 	};
-	const char* renderTypeNames[4] = { 
-		"Textured", 
+	const char* renderTypeNames[4] = {
+		"Textured",
 		"Unlit",
 		"World Normals",
 		"Normal Map"
 	};
 }settings;
 
+Objects objs;
+// temp
+std::vector<jsc::Object*> objsToCheckSelected;
+
+jsc::Object* selected = nullptr;
 
 int main() {
-	GLFWwindow* window = initWindow("Assignment 5 - Forward Kinematics", screenWidth, screenHeight);
+	GLFWwindow* window = initWindow("Assignment 5 - FK", screenWidth, screenHeight);
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glEnable(GL_DEPTH_TEST);
 
-// Setup ----------------------------------------------------------------*/
+	// Setup ----------------------------------------------------------------*/
 	light.transform.position.y = 2.0;
 
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
@@ -91,7 +101,7 @@ int main() {
 	camera.fov = 60.0f;
 
 	float minShadowBias = 0.005, maxShadowBias = 0.05;
- 	float shadowCamDistance = 3;
+	float shadowCamDistance = 3;
 	shadowCamera.target = glm::vec3(0.0f, 0.0f, 0.0f);
 	shadowCamera.position = glm::normalize(dirLight.dir) * shadowCamDistance;
 	shadowCamera.aspectRatio = (float)screenWidth / screenHeight;
@@ -113,7 +123,7 @@ int main() {
 	shader.setInt("_MainTex", 1);
 	shader.setInt("_NormalMap", 2);
 	shader.setInt("_ShadowMap", 3);
-	
+
 	depthShader.use();
 	depthShader.setInt("_DepthMap", 3);
 
@@ -136,76 +146,41 @@ int main() {
 	animator.clip = new jsc::AnimationClip();
 	animator.clip->duration = 2;
 
-	animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0,0,0)));
-	animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0,2,0)));
+	animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0, 0, 0)));
+	animator.clip->posKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0, 2, 0)));
 
-	animator.clip->scaleKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(1,1,1)));
-	animator.clip->scaleKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(2,2,2)));
+	animator.clip->scaleKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(1, 1, 1)));
+	animator.clip->scaleKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(2, 2, 2)));
 
-	animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0,0,0)));
-	animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0,3,0)));
+	animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(0, glm::vec3(0, 0, 0)));
+	animator.clip->rotKeys.push_back(jsc::KeyFrame<glm::vec3>(5, glm::vec3(0, 3, 0)));
 
-#pragma region Splines
+#pragma region FK
+	jsc::Skeleton skel;
+	skel.name = "Skel";
 
-	// Splines
-	jsc::Spline spline1(
-		ew::Shader("assets/unlit_line.vert", "assets/unlit_line.frag"), 
-		ew::Shader("assets/unlit.vert", "assets/unlit.frag"),
-		"Spline 1"
-	);
+	jsc::Joint* j1 = new jsc::Joint("Torso");
+	jsc::Joint* j2 = new jsc::Joint("Head");
+	jsc::Joint* j3 = new jsc::Joint("Shoulder_R");
+	jsc::Joint* j4 = new jsc::Joint("Shoulder_L");
+	jsc::Joint* j5 = new jsc::Joint("Elbow_R");
+	jsc::Joint* j6 = new jsc::Joint("Wrist_R");
 
-	spline1.addPoint(
-		ew::Transform(glm::vec3(0.0f, 0.0f, 0.0f),
-			glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-			glm::vec3(1.0f, 1.0f, 1.0f))
-	);
+	j2->setParent(j1);
+	j3->setParent(j1);
+	j4->setParent(j1);
+	j5->setParent(j3);
+	j6->setParent(j5);
 
-	//spline1.addPoint(
-	//	ew::Transform(spline1.points.front().position + glm::eulerAngles(spline1.points.front().rotation) * spline1.points.front().scale,
-	//		glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-	//		glm::vec3(1.0f, 1.0f, 1.0f)
-	//	)
-	//);
+	skel.joints.push_back(j1);
+	//skel.joints.push_back(j2);
 
-	//spline1.addPoint(
-	//	ew::Transform(glm::vec3(0.0f, 0.0f, 0.0f), 
-	//		glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
-	//		glm::vec3(1.0f, 1.0f, 1.0f))
-	//);
+	objs.push_back(&skel);
 
-	spline1.addPoint(
-		ew::Transform(glm::vec3(5.0f, 0.0f, 0.0f), 
-		glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
-		glm::vec3(1.0f, 1.0f, 1.0f))
-	);
+	//std::vector<jsc::Object*> skelKids = skel.getAllChildren();
+	objsToCheckSelected = skel.getAllChildren();
 
-	//spline1.addPoint(
-	//	ew::Transform(glm::vec3(10.0f, 3.0f, 0.0f), 
-	//		glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 
-	//		glm::vec3(1.0f, 1.0f, 1.0f))
-	//);
-
-	jsc::Spline spline2(
-		ew::Shader("assets/unlit_line.vert", "assets/unlit_line.frag"),
-		ew::Shader("assets/unlit.vert", "assets/unlit.frag"),
-		"Spline 2"
-	);
-
-	spline2.clr = glm::vec3(1.0, 1.0, 0);
-	spline2.width = 1;
-
-	spline2.addPoint(
-		ew::Transform(glm::vec3(-3.0f, 0.0f, 0.0f),
-			glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-			glm::vec3(1.0f, 1.0f, 1.0f))
-	);
-
-	spline2.addPoint(
-		ew::Transform(glm::vec3(-5.0f, 1.0f, 0.0f),
-			glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-			glm::vec3(1.0f, 1.0f, 1.0f))
-	);
-
+	//objs.insert(objs.end(), skelKids.begin(), skelKids.end());
 #pragma endregion
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -215,7 +190,7 @@ int main() {
 
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
-// Render Loop ----------------------------------------------------------*/
+	// Render Loop ----------------------------------------------------------*/
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
@@ -231,32 +206,14 @@ int main() {
 		shadowCamera.position = glm::normalize(dirLight.dir) * shadowCamDistance;
 
 		glClearColor(settings.clearClr.x, settings.clearClr.y, settings.clearClr.z, settings.clearClr.w);
-		
-// Animation ------------------------------------------------------------*/
-#pragma region Animation
-		//animator.playbackTime = 1; // Debug
 
-		//animator.update(deltaTime);
+		// Animation ------------------------------------------------------------*/
+#pragma region Skel
 		
-		//monkeyTransform.position = spline1.getValue(animator.playbackTime).position + glm::eulerAngles(spline1.getValue(animator.playbackTime).rotation);
-		monkeyTransform.position = spline1.getValue(animator.playbackTime).position;
-		monkeyTransform.rotation = glm::lookAt(
-			monkeyTransform.position,
-			monkeyTransform.position + glm::eulerAngles(spline1.getValue(animator.playbackTime).rotation),
-			glm::vec3(0, 0, 1)
-		);
-			
-
-		//monkeyTransform.position = 
-		//	animator.getValue(animator.clip->posKeys, monkeyTransform.position);
-		//monkeyTransform.scale = 
-		//	animator.getValue(animator.clip->scaleKeys, monkeyTransform.scale);
-		//monkeyTransform.rotation = 
-		//	animator.getValue(animator.clip->rotKeys, glm::eulerAngles(monkeyTransform.rotation));
 
 #pragma endregion
 
-// Shadow Pass ----------------------------------------------------------*/
+		// Shadow Pass ----------------------------------------------------------*/
 #pragma region Shadow Pass
 		glm::mat4 lightProj, lightView, lightSpaceMatrix;
 		float nearPlane = 1.0f, farPlane = 7.5f;
@@ -265,7 +222,7 @@ int main() {
 		lightView = glm::lookAt(
 			glm::vec3(shadowCamera.position.x, shadowCamera.position.y, shadowCamera.position.z),
 			glm::vec3(shadowCamera.target.x, shadowCamera.target.y, shadowCamera.target.z),
-			glm::vec3(0.0f, 1.0f, 0.0f)); 
+			glm::vec3(0.0f, 1.0f, 0.0f));
 
 		lightSpaceMatrix = lightProj * lightView;
 
@@ -281,15 +238,18 @@ int main() {
 		depthShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw();
 
+		// Dont forget to draw scene here too
+		// TODO Actually make a function for it
+
 		depthShader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
-		
+
 		glCullFace(GL_BACK);
 
 
 #pragma endregion
 
-// Lighting Pass --------------------------------------------------------*/
+		// Lighting Pass --------------------------------------------------------*/
 #pragma region Lighting Pass
 		// Back to default FB
 		//postProcessor.preRender();
@@ -327,24 +287,30 @@ int main() {
 		// Models
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		shader.setMat4("_LightSpaceMatrix", lightSpaceMatrix);
-		
+
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw();
+
+		shader.setMat4("_Model", j1->transform.modelMatrix());
+		monkeyModel.draw();
+
+		//for each(jsc::Object* joint in objsToCheckSelected)
+		//{
+		//	shader.setMat4("_Model", joint->transform.modelMatrix());
+		//	monkeyModel.draw();
+		//}
 
 		shader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
 
-		// Splines
-		spline1.draw(camera);
-		spline1.debugDrawVelocity(camera, animator.playbackTime);
-		spline2.draw(camera);
 
 #pragma endregion
 
-// Post Process Pass ----------------------------------------------------*/
+		// Post Process Pass ----------------------------------------------------*/
 #pragma region Post Process Pass
 		//postProcessor.render();
 		//postProcessor.draw();
+
 
 #pragma endregion
 
@@ -372,7 +338,7 @@ int main() {
 		//ImGui::End();
 
 		// Animator UI
-		ImGui::SetNextWindowPos({ screenWidth - guiWidth,0 });
+		ImGui::SetNextWindowPos({ screenWidth - guiWidth * 2,0 });
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Animation", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 
@@ -381,11 +347,12 @@ int main() {
 		ImGui::End();
 
 		// Spline UI. 
-		ImGui::SetNextWindowPos({ screenWidth - guiWidth * 2,0 });
+		ImGui::SetNextWindowPos({ screenWidth - guiWidth,0 });
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
-		ImGui::Begin("Spline 1", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
+		ImGui::Begin("Inspector", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 
-		spline1.showUI();
+		if (selected != nullptr)
+			selected->drawInspectorUI();
 
 		ImGui::End();
 
@@ -394,24 +361,6 @@ int main() {
 		ImGui::SetNextWindowSize({ guiWidth, (float)screenHeight });
 		ImGui::Begin("Settings", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
-		/*
-		if (ImGui::CollapsingHeader("View Ping Pong Textures"))
-		{
-			ImGui::Indent();
-
-			ImGui::Text("Ping Pong 1");
-			float ratio = guiWidth / postProcessor.getWidthHeight().x;
-			ImVec2 imageDrawSize = ImVec2(postProcessor.getWidthHeight().x * ratio, postProcessor.getWidthHeight().y * ratio);
-			ImGui::Image((ImTextureID)postProcessor.getColourTextures()[0], imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
-			
-			ImGui::Text("Ping Pong 2");
-			ImGui::Image((ImTextureID)postProcessor.getColourTextures()[1], imageDrawSize, ImVec2(0, 1), ImVec2(1, 0));
-
-			ImGui::Unindent();
-		}
-		*/
-
-		ImGui::Text(std::to_string(spline1.getValue(animator.playbackTime).position.y).c_str());
 
 		if (ImGui::CollapsingHeader("Light & Shadow Settings"))
 		{
@@ -447,6 +396,7 @@ int main() {
 		{
 			ImGui::Indent();
 
+
 			ImGui::Checkbox("Use Normal Map", &settings.useNormalMap);
 
 
@@ -459,6 +409,29 @@ int main() {
 			ImGui::Unindent();
 		}
 
+		ImGui::Text("Objects");
+
+		for each(jsc::Object * obj in objs)
+		{
+			obj->drawSceneUI();
+
+			if (obj->clicked) {
+				selected = obj;
+				obj->unClick();
+			}
+		}
+
+		// This is temporary to select joints before I move parent stuff to object
+		for each(jsc::Object * obj in objsToCheckSelected)
+		{
+			if (obj->clicked) {
+				selected = obj;
+				obj->unClick();
+			}
+		}
+
+		drawTransformUI(monkeyTransform);
+
 		ImGui::End();
 
 		ImGui::Render();
@@ -466,9 +439,10 @@ int main() {
 
 #pragma endregion
 
+
 		glfwSwapBuffers(window);
 	}
-	
+
 	glDeleteVertexArrays(1, &depthVAO);
 
 	printf("Sayonara!");
@@ -484,13 +458,13 @@ void drawUI() {
 	ImGui::SetNextWindowSize({ 300, (float)screenHeight });
 	ImGui::Begin("Settings", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
-	if (ImGui::CollapsingHeader("Post Processing")) 
+	if (ImGui::CollapsingHeader("Post Processing"))
 	{
 
 	}
 
 
-	if (ImGui::CollapsingHeader("Scene Settings")) 
+	if (ImGui::CollapsingHeader("Scene Settings"))
 	{
 
 		if (ImGui::Button("Reset Camera"))
@@ -520,8 +494,8 @@ void drawUI() {
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void drawTransformUI(ew::Transform &transform) {
-	ImGui::DragFloat3("Position", &transform.position.x, .05f,  -10.0f, 10.0f);
+void drawTransformUI(ew::Transform& transform) {
+	ImGui::DragFloat3("Position", &transform.position.x, .05f, -10.0f, 10.0f);
 	ImGui::DragFloat4("Rotation", &transform.rotation.x, .05f, -10.0f, 10.0f);
 	ImGui::DragFloat3("Scale", &transform.scale.x, .05f, -10.0f, 10.0f);
 }
